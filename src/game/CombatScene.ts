@@ -20,6 +20,39 @@ const CHAMBER_POSITIONS = [
   { x: 699, y: 203 },
 ] as const;
 
+const BULLET_TOOLTIP_LINES = {
+  birdshot: {
+    damage: "2, or 3 stacks vs swarm",
+    effect: "Wide spread clears multiple swarm bodies",
+    effectiveVs: "Swarms",
+  },
+  buckshot: {
+    damage: "4, up to 9 on exposed targets",
+    effect: "Interrupts charge and sniper aim",
+    effectiveVs: "Charging or exposed targets",
+  },
+  slug: {
+    damage: "6, 10 on steady targets",
+    effect: "Heavy single-target hit",
+    effectiveVs: "Hovering or steady targets",
+  },
+  armor_piercing: {
+    damage: "6 through armor, 3 otherwise",
+    effect: "Ignores armor and shields",
+    effectiveVs: "Armored targets",
+  },
+  flechette: {
+    damage: "1 direct, or 2 infestation vs swarm",
+    effect: "Shreds armor or seeds damage over time",
+    effectiveVs: "Armored or stacked targets",
+  },
+  blank: {
+    damage: "0",
+    effect: "Gain 6 guard",
+    effectiveVs: "Big incoming hits",
+  },
+} as const;
+
 type ChamberVisual = {
   box: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
@@ -41,11 +74,10 @@ export class CombatScene extends Phaser.Scene {
   private logs: string[] = [];
 
   private titleText!: Phaser.GameObjects.Text;
-  private encounterText!: Phaser.GameObjects.Text;
   private playerText!: Phaser.GameObjects.Text;
   private enemyText!: Phaser.GameObjects.Text;
   private enemyIntentText!: Phaser.GameObjects.Text;
-  private enemyDetailText!: Phaser.GameObjects.Text;
+  private enemyIntentDetailText!: Phaser.GameObjects.Text;
   private deckText!: Phaser.GameObjects.Text;
   private logText!: Phaser.GameObjects.Text;
   private footerText!: Phaser.GameObjects.Text;
@@ -122,14 +154,7 @@ export class CombatScene extends Phaser.Scene {
       color: "#f4ddb0",
     });
 
-    this.encounterText = this.add.text(46, 98, "", {
-      fontFamily: "Trebuchet MS, sans-serif",
-      fontSize: "22px",
-      color: "#d7dee8",
-      wordWrap: { width: 340 },
-    });
-
-    this.playerText = this.add.text(46, 176, "", {
+    this.playerText = this.add.text(46, 98, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "24px",
       color: "#f4ddb0",
@@ -137,7 +162,7 @@ export class CombatScene extends Phaser.Scene {
       wordWrap: { width: 330 },
     });
 
-    this.enemyText = this.add.text(46, 378, "", {
+    this.enemyText = this.add.text(46, 332, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "24px",
       color: "#f7b87c",
@@ -145,17 +170,17 @@ export class CombatScene extends Phaser.Scene {
       wordWrap: { width: 330 },
     });
 
-    this.enemyIntentText = this.add.text(46, 308, "VS", {
-      fontFamily: "Georgia, serif",
-      fontSize: "28px",
+    this.enemyIntentText = this.add.text(46, 430, "", {
+      fontFamily: "Trebuchet MS, sans-serif",
+      fontSize: "20px",
       color: "#d7dee8",
     });
 
-    this.enemyDetailText = this.add.text(46, 472, "", {
-      fontFamily: "Trebuchet MS, sans-serif",
-      fontSize: "22px",
-      color: "#b8e2ff",
-      lineSpacing: 6,
+    this.enemyIntentDetailText = this.add.text(46, 456, "", {
+      fontFamily: "Georgia, serif",
+      fontSize: "28px",
+      color: "#f7b87c",
+      lineSpacing: 4,
       wordWrap: { width: 330 },
     });
 
@@ -196,13 +221,14 @@ export class CombatScene extends Phaser.Scene {
     const centerRing = this.add.circle(600, 252, 32, 0x121820, 0.95);
     centerRing.setStrokeStyle(3, 0xb69042, 0.95);
 
-    this.deckText = this.add.text(445, 480, "", {
+    this.deckText = this.add.text(444, 442, "", {
       fontFamily: "Trebuchet MS, sans-serif",
-      fontSize: "22px",
-      color: "#d7dee8",
-      lineSpacing: 8,
+      fontSize: "16px",
+      color: "#aeb9c8",
+      lineSpacing: 5,
       wordWrap: { width: 320 },
     });
+    this.deckText.setAlpha(0.82);
 
     this.logText = this.add.text(790, 108, "", {
       fontFamily: "Courier New, monospace",
@@ -388,8 +414,9 @@ export class CombatScene extends Phaser.Scene {
     const text = round
       ? [
           BULLET_DEFS[round].label,
-          BULLET_DEFS[round].description,
-          BULLET_DEFS[round].matchup,
+          `Damage: ${BULLET_TOOLTIP_LINES[round].damage}`,
+          `Effect: ${BULLET_TOOLTIP_LINES[round].effect}`,
+          `Effective vs: ${BULLET_TOOLTIP_LINES[round].effectiveVs}`,
         ].join("\n")
       : [
           "Empty Chamber",
@@ -416,26 +443,55 @@ export class CombatScene extends Phaser.Scene {
     this.tooltipText.setVisible(false);
   }
 
-  private getEnemySummary(intent: ReturnType<typeof getEnemyIntent>): string {
-    const lines = [this.state.enemy.label.toUpperCase()];
+  private toTitleCase(value: string): string {
+    return value
+      .toLowerCase()
+      .split(/[_\s]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
 
-    if (this.state.enemy.id === "rat_swarm") {
-      lines.push(`Stacks: ${this.state.enemy.stacks}`);
-    } else {
-      lines.push(`HP ${this.state.enemy.hp}/${this.state.enemy.maxHp}`);
-      if (this.state.enemy.armor > 0) {
-        lines.push(`Armor: ${this.state.enemy.armor}`);
-      }
-      if (this.state.enemy.shred > 0) {
-        lines.push(`Shred: ${this.state.enemy.shred}`);
-      }
-      if (this.state.enemy.id === "sniper" && this.state.enemy.interrupted) {
-        lines.push("Interrupted");
-      }
+  private getCompactIntentDetail(intent: ReturnType<typeof getEnemyIntent>): string {
+    switch (intent.id) {
+      case "shield_up":
+        return "+6 Armor";
+      case "advance":
+        return "Wind up baton strike";
+      case "baton_strike":
+        return "12 damage";
+      case "cooldown":
+        return "Drops armor";
+      case "scurry":
+        return "2 damage";
+      case "multiply":
+        return "+2 stacks";
+      case "swarm_attack":
+        return `${intent.previewDamage ?? 0} damage`;
+      case "aim_1":
+        return "Acquire target";
+      case "aim_2":
+        return "Hold sightline";
+      case "headshot":
+        return `${intent.previewDamage ?? 0} damage`;
+      case "hover":
+        return "Stable target";
+      case "evasive":
+        return "Reduced slug damage";
+      case "laser":
+        return `${intent.previewDamage ?? 0} damage`;
+      case "recharge":
+        return "Exposed";
+      default:
+        return intent.detail.replace(/\.$/, "");
     }
+  }
 
-    lines.push(`Intent: ${intent.label}`);
-    lines.push(intent.detail);
+  private getEnemySummary(intent: ReturnType<typeof getEnemyIntent>): string {
+    const lines = [
+      this.state.enemy.label.toUpperCase(),
+      `HP ${this.state.enemy.hp}/${this.state.enemy.maxHp}`,
+    ];
     return lines.join("\n");
   }
 
@@ -509,18 +565,57 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private renderChambers(animated: boolean): void {
+    const order = getCylinderOrder({
+      ...this.state.cylinder,
+      currentIndex: this.displayCurrentIndex,
+    });
+    const currentChamber = order[0];
+    const nextChamber = order[1];
+    const secondNextChamber = order[2];
+
     this.chamberVisuals.forEach((visual, index) => {
       const round = this.state.cylinder.chambers[index];
-      const current = index === this.displayCurrentIndex;
+      const current = index === currentChamber;
+      const next = index === nextChamber;
+      const secondNext = index === secondNextChamber;
       const bullet = round ? BULLET_DEFS[round] : null;
-      visual.box.setFillStyle(current ? 0x8f6422 : 0x263445, current ? 1 : 0.95);
-      visual.box.setStrokeStyle(3, current ? 0xf1c66b : round ? 0x5b6d82 : 0x3d4d60, 1);
-      visual.box.setDepth(current ? 6 : 2);
+      const fillColor = current ? 0x8f6422 : next ? 0x31465d : secondNext ? 0x2b3d52 : 0x263445;
+      const fillAlpha = current ? 1 : next ? 0.98 : secondNext ? 0.96 : 0.95;
+      const strokeColor = current
+        ? 0xf1c66b
+        : next
+          ? 0xb7c8dc
+          : secondNext
+            ? 0x7f95ad
+            : round
+              ? 0x5b6d82
+              : 0x3d4d60;
+      const strokeWidth = current ? 3 : next ? 3 : secondNext ? 2 : 2;
+      const labelColor = current
+        ? "#fff6db"
+        : next
+          ? "#eef4fb"
+          : secondNext
+            ? "#d7e2ef"
+            : bullet
+              ? "#e9edf2"
+              : "#8fa0b4";
+      const indexColor = current ? "#fff6db" : next ? "#dbe7f4" : secondNext ? "#c0cede" : "#9eb0c5";
+      const depth = current ? 6 : next ? 5 : secondNext ? 4 : 2;
+      const boxScale = current ? 1 : next ? 0.9 : secondNext ? 0.82 : 0.74;
+      const textScale = current ? 1 : next ? 0.92 : secondNext ? 0.86 : 0.8;
+
+      visual.box.setFillStyle(fillColor, fillAlpha);
+      visual.box.setStrokeStyle(strokeWidth, strokeColor, 1);
+      visual.box.setDepth(depth);
+      visual.box.setScale(boxScale);
       visual.label.setText(bullet ? bullet.shortLabel : "--");
-      visual.label.setColor(current ? "#fff6db" : bullet ? "#e9edf2" : "#8fa0b4");
-      visual.label.setDepth(current ? 7 : 3);
-      visual.index.setColor(current ? "#fff6db" : "#9eb0c5");
-      visual.index.setDepth(current ? 7 : 3);
+      visual.label.setColor(labelColor);
+      visual.label.setDepth(depth + 1);
+      visual.label.setScale(textScale);
+      visual.index.setColor(indexColor);
+      visual.index.setDepth(depth + 1);
+      visual.index.setScale(textScale);
     });
     this.layoutChambers(animated, this.displayCurrentIndex);
   }
@@ -529,16 +624,15 @@ export class CombatScene extends Phaser.Scene {
     const intent = getEnemyIntent(this.state.enemy);
     const nextLabel = this.getNextEncounterLabel();
 
-    this.encounterText.setText(
-      `Combat ${this.encounterIndex + 1}/${ENEMY_ORDER.length}: ${this.state.enemy.label}\n1 Rat Swarm  2 Riot Droid  3 Sniper  4 Drone`,
-    );
-
     this.playerText.setText(
-      `PLAYER\nHP ${this.state.player.hp}/${this.state.player.maxHp}\nGuard ${this.state.player.guard}`,
+      `PLAYER\nHP ${this.state.player.hp}/${this.state.player.maxHp}\nGuard ${this.state.player.guard}\n\nVS`,
     );
 
     this.enemyText.setText(this.getEnemySummary(intent));
-    this.enemyDetailText.setText("");
+    this.enemyIntentText.setText("INTENT");
+    this.enemyIntentDetailText.setText(
+      `${this.toTitleCase(intent.label).toUpperCase()}\n(${this.getCompactIntentDetail(intent).toUpperCase()})`,
+    );
 
     this.outcomeText.setText(
       this.state.over
