@@ -70,3 +70,39 @@ TODOs / suggestions:
 
 Remaining note:
 - Vite still warns about the Phaser bundle exceeding the chunk-size threshold during production builds; this is only a warning and does not block the prototype.
+- Added sequential encounter progression in `src/game/CombatScene.ts`.
+  - `Enter` now continues to the next enemy after a victory.
+  - Defeat or final victory restarts the run from the first combat.
+  - `render_game_to_text` now exposes encounter index/total/next enemy label.
+  - UI copy now distinguishes between encounter clear, run clear, and defeat.
+- Validation:
+  - `npx tsc --noEmit` passes.
+  - `npm test` passes.
+  - `npm run build` passes.
+  - `./run_playwright.ps1` passes with no captured browser errors.
+  - Latest `state-0.json` shows encounter progression metadata (`index: 1`, `total: 4`, `next: Riot Droid`).
+
+- Added a lightweight deterministic simulation harness in `src/sim/`.
+  - `simulate.ts` runs repeated fights through the pure `stepCombat()` resolver and prints comparison tables.
+  - `policies.ts` defines the baseline `FIRE_ONLY`, `GREEDY_MATCHUP`, `SPIN_HAPPY`, and `RELOAD_SPAM` bots plus helper functions for live rounds and empty chambers.
+  - `metrics.ts` aggregates win rate, average turns, damage taken, reloads, spins, rotates, and click counts.
+  - `makeStartingState.ts` builds seeded starting states and cycles enemies across runs.
+- Added `tsx` as a dev dependency and `npm run sim` in `package.json`.
+- Updated `README.md`:
+  - corrected the current `SPIN` and `Enter` behavior descriptions.
+  - documented `npm run sim`, simulator flags, and how to add policies/metrics.
+- Validation:
+  - `npx tsc --noEmit` passes.
+  - `npm test` passes.
+  - `npm run build` passes.
+  - `npm run sim` passes with the default 5000-fight run.
+  - `./run_playwright.ps1` passes; no `output/web-game/errors-*.json` files were produced and `shot-0.png` still renders the combat scene correctly.
+- Current sim baseline from `npm run sim` (5000 fights per policy, mixed enemy cycle, base seed 1337):
+  - `FIRE_ONLY`: 79.78% win, 9.95 avg turns, 14.55 avg damage taken.
+  - `GREEDY_MATCHUP`: 26.30% win, 11.58 avg turns, 24.90 avg damage taken.
+  - `SPIN_HAPPY`: 8.00% win, 11.90 avg turns, 26.81 avg damage taken.
+  - `RELOAD_SPAM`: 44.74% win, 10.88 avg turns, 22.59 avg damage taken.
+
+TODOs / suggestions:
+- Revisit the `GREEDY_MATCHUP` heuristic; it obeys the requested rotate-to-best-round rule but currently loses badly to `FIRE_ONLY`, especially into Riot Droid.
+- Consider exposing loadout/enemy-set CLI flags in the sim if balancing moves beyond the starter roster.

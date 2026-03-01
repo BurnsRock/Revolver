@@ -1,4 +1,5 @@
 import {
+  CYLINDER_ROTATION_DIRECTION,
   collectCylinderRounds,
   createEmptyCylinder,
   fireCurrentRound,
@@ -341,12 +342,22 @@ export const stepCombat = (
       nextState.cylinder = fired.cylinder;
       nextState.deck = discardBullets(nextState.deck, [fired.bullet]);
       events.push({ type: "bullet_fired", bullet: fired.bullet, chamberIndex });
+      events.push({
+        type: "cylinder_changed",
+        action: "rotate",
+        currentIndex: nextState.cylinder.currentIndex,
+        rotations: 1,
+      });
       if (fired.bullet === null) {
-        emitLog(events, "Dry fire. The current chamber is empty.");
+        emitLog(events, "Dry fire. The chamber clicks empty.");
       } else {
         emitLog(events, `Fire ${BULLET_DEFS[fired.bullet].label}.`);
         resolveBullet(nextState, fired.bullet, events);
       }
+      emitLog(
+        events,
+        `Cylinder auto-rotates ${CYLINDER_ROTATION_DIRECTION} to chamber ${nextState.cylinder.currentIndex + 1}.`,
+      );
       break;
     }
     case "rotate":
@@ -355,8 +366,12 @@ export const stepCombat = (
         type: "cylinder_changed",
         action: "rotate",
         currentIndex: nextState.cylinder.currentIndex,
+        rotations: 1,
       });
-      emitLog(events, "Rotate to the next chamber.");
+      emitLog(
+        events,
+        `Rotate ${CYLINDER_ROTATION_DIRECTION} to chamber ${nextState.cylinder.currentIndex + 1}.`,
+      );
       break;
     case "spin": {
       const spun = spinCylinder(nextState.cylinder, nextState.seed);
@@ -366,8 +381,12 @@ export const stepCombat = (
         type: "cylinder_changed",
         action: "spin",
         currentIndex: nextState.cylinder.currentIndex,
+        rotations: spun.rotations,
       });
-      emitLog(events, "Spin randomizes the remaining chamber order.");
+      emitLog(
+        events,
+        `Spin rotates ${CYLINDER_ROTATION_DIRECTION} for ${spun.rotations} chambers.`,
+      );
       break;
     }
     case "reload":
@@ -437,6 +456,7 @@ export const getCombatSnapshot = (state: CombatState) => ({
   },
   cylinder: {
     currentIndex: state.cylinder.currentIndex,
+    direction: CYLINDER_ROTATION_DIRECTION,
     chambers: [...state.cylinder.chambers],
   },
   deck: {

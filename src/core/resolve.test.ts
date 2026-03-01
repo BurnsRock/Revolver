@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyCylinder, loadCylinder } from "./cylinder";
+import {
+  createEmptyCylinder,
+  fireCurrentRound,
+  loadCylinder,
+  rotateCylinder,
+  rotateCylinderBySteps,
+  spinCylinder,
+  SPIN_ROTATION_MAX,
+  SPIN_ROTATION_MIN,
+} from "./cylinder";
 import { createCombatState, stepCombat } from "./resolve";
 import type { BulletType, CombatState } from "./types";
 
@@ -58,5 +67,47 @@ describe("combat matchups", () => {
       throw new Error("Expected sniper result.");
     }
     expect(result.state.enemy.cycleIndex).toBe(0);
+  });
+});
+
+describe("cylinder rotation", () => {
+  it("auto-rotates after firing and skips empty chambers", () => {
+    const cylinder = {
+      chambers: ["birdshot", null, "slug", null, "blank", null] satisfies Array<BulletType | null>,
+      currentIndex: 0,
+      capacity: 6,
+    };
+
+    const fired = fireCurrentRound(cylinder);
+
+    expect(fired.bullet).toBe("birdshot");
+    expect(fired.cylinder.currentIndex).toBe(2);
+    expect(fired.cylinder.chambers[0]).toBeNull();
+  });
+
+  it("manual rotate skips empty chambers clockwise", () => {
+    const cylinder = {
+      chambers: [null, "birdshot", null, "blank", "slug", null] satisfies Array<BulletType | null>,
+      currentIndex: 4,
+      capacity: 6,
+    };
+
+    expect(rotateCylinder(cylinder).currentIndex).toBe(1);
+  });
+
+  it("spin rotates a random number of steps within the configured range", () => {
+    const cylinder = {
+      chambers: ["birdshot", null, "buckshot", null, "blank", null] satisfies Array<BulletType | null>,
+      currentIndex: 0,
+      capacity: 6,
+    };
+
+    const spun = spinCylinder(cylinder, 12345);
+
+    expect(spun.rotations).toBeGreaterThanOrEqual(SPIN_ROTATION_MIN);
+    expect(spun.rotations).toBeLessThanOrEqual(SPIN_ROTATION_MAX);
+    expect(spun.cylinder.currentIndex).toBe(
+      rotateCylinderBySteps(cylinder, spun.rotations).currentIndex,
+    );
   });
 });

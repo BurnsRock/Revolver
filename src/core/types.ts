@@ -107,7 +107,12 @@ export interface CombatState {
 export type CombatEvent =
   | { type: "player_action"; action: PlayerAction }
   | { type: "bullet_fired"; bullet: BulletType | null; chamberIndex: number }
-  | { type: "cylinder_changed"; action: "rotate" | "spin" | "reload"; currentIndex: number }
+  | {
+      type: "cylinder_changed";
+      action: "rotate" | "spin" | "reload";
+      currentIndex: number;
+      rotations?: number;
+    }
   | { type: "guard_gained"; amount: number; total: number }
   | { type: "enemy_damaged"; amount: number; blocked: number; remainingHp: number; source: string }
   | { type: "player_damaged"; amount: number; blocked: number; remainingHp: number; source: string }

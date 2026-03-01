@@ -1,6 +1,10 @@
 import { shuffleWithSeed } from "./rng";
 import { CYLINDER_CAPACITY, type BulletType, type CylinderState } from "./types";
 
+export const CYLINDER_ROTATION_DIRECTION = "clockwise" as const;
+export const SPIN_ROTATION_MIN = 19;
+export const SPIN_ROTATION_MAX = 24;
+
 export const createEmptyCylinder = (capacity: number = CYLINDER_CAPACITY): CylinderState => ({
   chambers: Array.from({ length: capacity }, () => null),
   currentIndex: 0,
@@ -15,6 +19,20 @@ export const getCylinderOrder = (cylinder: CylinderState): number[] =>
 export const collectCylinderRounds = (cylinder: CylinderState): Array<BulletType | null> => [
   ...cylinder.chambers,
 ];
+
+export const findNextLoadedChamberIndex = (
+  cylinder: CylinderState,
+  startIndex: number = cylinder.currentIndex,
+): number => {
+  for (let step = 1; step <= cylinder.capacity; step += 1) {
+    const index = (startIndex + step) % cylinder.capacity;
+    if (cylinder.chambers[index] !== null) {
+      return index;
+    }
+  }
+
+  return startIndex;
+};
 
 export const loadCylinder = (
   cylinder: CylinderState,
@@ -34,11 +52,19 @@ export const fireCurrentRound = (
   const chambers = [...cylinder.chambers];
   const bullet = chambers[cylinder.currentIndex] ?? null;
   chambers[cylinder.currentIndex] = null;
+  const nextIndex = findNextLoadedChamberIndex(
+    {
+      chambers,
+      currentIndex: cylinder.currentIndex,
+      capacity: cylinder.capacity,
+    },
+    cylinder.currentIndex,
+  );
   return {
     bullet,
     cylinder: {
       chambers,
-      currentIndex: cylinder.currentIndex,
+      currentIndex: nextIndex,
       capacity: cylinder.capacity,
     },
   };
@@ -46,29 +72,48 @@ export const fireCurrentRound = (
 
 export const rotateCylinder = (cylinder: CylinderState): CylinderState => ({
   chambers: [...cylinder.chambers],
-  currentIndex: (cylinder.currentIndex + 1) % cylinder.capacity,
+  currentIndex: findNextLoadedChamberIndex(cylinder),
   capacity: cylinder.capacity,
 });
+
+export const rotateCylinderBySteps = (
+  cylinder: CylinderState,
+  steps: number,
+): CylinderState => {
+  let nextCylinder = {
+    chambers: [...cylinder.chambers],
+    currentIndex: cylinder.currentIndex,
+    capacity: cylinder.capacity,
+  };
+
+  for (let i = 0; i < steps; i += 1) {
+    nextCylinder = rotateCylinder(nextCylinder);
+  }
+
+  return nextCylinder;
+};
 
 export const spinCylinder = (
   cylinder: CylinderState,
   seed: number,
-): { cylinder: CylinderState; seed: number } => {
-  const orderedIndices = getCylinderOrder(cylinder);
-  const orderedRounds = orderedIndices.map((index) => cylinder.chambers[index]);
-  const shuffled = shuffleWithSeed(seed, orderedRounds);
-  const chambers = [...cylinder.chambers];
-
-  orderedIndices.forEach((index, offset) => {
-    chambers[index] = shuffled.values[offset] ?? null;
-  });
+): { cylinder: CylinderState; seed: number; rotations: number } => {
+  const loadedCount = cylinder.chambers.filter((round) => round !== null).length;
+  const shuffled = shuffleWithSeed(
+    seed,
+    Array.from(
+      { length: SPIN_ROTATION_MAX - SPIN_ROTATION_MIN + 1 },
+      (_, offset) => SPIN_ROTATION_MIN + offset,
+    ),
+  );
+  const rotations = shuffled.values[0] ?? SPIN_ROTATION_MIN;
+  const nextCylinder =
+    loadedCount > 0
+      ? rotateCylinderBySteps(cylinder, rotations)
+      : { ...cylinder, chambers: [...cylinder.chambers] };
 
   return {
     seed: shuffled.seed,
-    cylinder: {
-      chambers,
-      currentIndex: cylinder.currentIndex,
-      capacity: cylinder.capacity,
-    },
+    rotations,
+    cylinder: nextCylinder,
   };
 };
