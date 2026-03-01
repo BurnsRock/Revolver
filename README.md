@@ -17,6 +17,7 @@ Each turn the enemy telegraphs its next move. You choose exactly one revolver ac
 - `ROTATE`: advance to the next chamber.
 - `SPIN`: rotate the cylinder a random 19 to 24 chambers.
 - `RELOAD`: dump live rounds, draw 6 fresh bullets, and refill the cylinder.
+- After each non-final victory you enter a shop, spend credits on accessories, then continue the run.
 
 The pure combat rules live under `src/core/`. Phaser in `src/game/CombatScene.ts` only renders state, logs, and input.
 
@@ -27,7 +28,8 @@ The pure combat rules live under `src/core/`. Phaser in `src/game/CombatScene.ts
 - `S`: Spin
 - `L`: Reload
 - `1` `2` `3` `4`: Load Rat Swarm / Riot Droid / Sniper / Drone
-- `Enter`: Continue after a win, or restart the run after a loss/final clear
+- `1` `2` `3` in shop: Buy an accessory
+- `Enter`: Continue after a win/shop, or restart the run after a loss/final clear
 - `X`: Toggle fullscreen
 - `Esc`: Exit fullscreen
 
@@ -42,6 +44,11 @@ Enemies:
 - Add a new enemy state shape to `src/core/types.ts` if it needs custom fields.
 - Add its behavior definition in `src/core/content/enemies.ts`.
 - Add the new enemy id to `ENEMY_ORDER` so the scene can load it.
+
+Accessories:
+- Add the accessory definition to `src/core/content/accessories.ts`.
+- Apply its combat effect in `src/core/resolve.ts`.
+- The shop reads labels, prices, and descriptions from the accessory definitions automatically.
 
 Tests:
 - Deterministic combat tests live in `src/core/resolve.test.ts`.

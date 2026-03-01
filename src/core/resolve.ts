@@ -7,11 +7,13 @@ import {
   rotateCylinder,
   spinCylinder,
 } from "./cylinder";
+import { ACCESSORY_DEFS } from "./content/accessories";
 import { BULLET_DEFS, STARTER_LOADOUT } from "./content/bullets";
 import { createEnemyState, getEnemyDef, getEnemyIntent, getEnemyTags } from "./content/enemies";
 import { createDeckState, discardBullets, drawBullets } from "./deck";
 import { normalizeSeed } from "./rng";
 import type {
+  AccessoryId,
   BulletType,
   CombatEvent,
   CombatState,
@@ -58,9 +60,13 @@ const cloneState = (state: CombatState): CombatState => ({
     currentIndex: state.cylinder.currentIndex,
     capacity: state.cylinder.capacity,
   },
+  accessories: [...state.accessories],
   over: state.over,
   outcome: state.outcome,
 });
+
+const hasAccessory = (state: CombatState, accessoryId: AccessoryId): boolean =>
+  state.accessories.includes(accessoryId);
 
 const hasArmor = (enemy: EnemyState): boolean =>
   enemy.armor > 0 || Math.max(0, enemy.armor - enemy.shred) > 0;
@@ -125,26 +131,40 @@ const removeSwarmStacks = (
   return removed;
 };
 
-const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
-  state.player.guard += BLANK_GUARD;
+const grantGuard = (
+  state: CombatState,
+  amount: number,
+  events: CombatEvent[],
+  source: string,
+): void => {
+  state.player.guard += amount;
   events.push({
     type: "guard_gained",
-    amount: BLANK_GUARD,
+    amount,
     total: state.player.guard,
   });
-  emitLog(events, `Blank grants ${BLANK_GUARD} guard.`);
+  emitLog(events, `${source} grants ${amount} guard.`);
+};
+
+const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
+  grantGuard(state, BLANK_GUARD, events, "Blank");
+  if (hasAccessory(state, "shock_padding")) {
+    grantGuard(state, 4, events, ACCESSORY_DEFS.shock_padding.label);
+  }
 };
 
 const applyBirdshot = (state: CombatState, events: CombatEvent[]): void => {
+  const extra = hasAccessory(state, "honed_choke") ? 1 : 0;
   if (state.enemy.id === "rat_swarm") {
-    removeSwarmStacks(state.enemy, 3, events, "Birdshot");
+    removeSwarmStacks(state.enemy, 3 + extra, events, "Birdshot");
     return;
   }
-  damageEnemy(state, 2, "Birdshot", events);
+  damageEnemy(state, 2 + extra, "Birdshot", events);
 };
 
 const applyBuckshot = (state: CombatState, events: CombatEvent[]): void => {
   const tags = getEnemyTags(state.enemy);
+  const bonusDamage = hasAccessory(state, "rifled_tools") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 2, events, "Buckshot");
@@ -152,30 +172,31 @@ const applyBuckshot = (state: CombatState, events: CombatEvent[]): void => {
   }
 
   if (state.enemy.id === "riot_droid" && tags.includes("charging")) {
-    damageEnemy(state, 6, "Buckshot", events);
+    damageEnemy(state, 6 + bonusDamage, "Buckshot", events);
     (state.enemy as RiotDroidState).cycleIndex = 3;
     emitLog(events, "Buckshot staggers the droid into cooldown.");
     return;
   }
 
   if (state.enemy.id === "sniper") {
-    damageEnemy(state, 5, "Buckshot", events);
+    damageEnemy(state, 5 + bonusDamage, "Buckshot", events);
     (state.enemy as SniperState).interrupted = true;
     emitLog(events, "Buckshot blows the sniper off the sightline.");
     return;
   }
 
   if (tags.includes("exposed")) {
-    damageEnemy(state, 9, "Buckshot", events);
+    damageEnemy(state, 9 + bonusDamage, "Buckshot", events);
     emitLog(events, "Buckshot cashes in on the exposed window.");
     return;
   }
 
-  damageEnemy(state, 4, "Buckshot", events);
+  damageEnemy(state, 4 + bonusDamage, "Buckshot", events);
 };
 
 const applySlug = (state: CombatState, events: CombatEvent[]): void => {
   const tags = getEnemyTags(state.enemy);
+  const bonusDamage = hasAccessory(state, "rifled_tools") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 1, events, "Slug");
@@ -183,50 +204,52 @@ const applySlug = (state: CombatState, events: CombatEvent[]): void => {
   }
 
   if (tags.includes("evasive")) {
-    damageEnemy(state, 1, "Slug", events);
+    damageEnemy(state, 1 + bonusDamage, "Slug", events);
     emitLog(events, "Slug barely clips the evasive target.");
     return;
   }
 
   if (tags.includes("hover") || tags.includes("steady")) {
-    damageEnemy(state, 10, "Slug", events);
+    damageEnemy(state, 10 + bonusDamage, "Slug", events);
     emitLog(events, "Slug lands squarely on the stable target.");
     return;
   }
 
-  damageEnemy(state, 6, "Slug", events);
+  damageEnemy(state, 6 + bonusDamage, "Slug", events);
 };
 
 const applyArmorPiercing = (state: CombatState, events: CombatEvent[]): void => {
-  const damage = hasArmor(state.enemy) ? 6 : 3;
+  const armoredBonus = hasAccessory(state, "tungsten_core") && hasArmor(state.enemy) ? 2 : 0;
+  const damage = hasArmor(state.enemy) ? 6 + armoredBonus : 3;
   damageEnemy(state, damage, "Armor Piercing", events, true);
 };
 
 const applyFlechette = (state: CombatState, events: CombatEvent[]): void => {
+  const extraStatus = hasAccessory(state, "shredder_tools") ? 1 : 0;
   if (state.enemy.id === "rat_swarm") {
-    state.enemy.infestation += 2;
+    state.enemy.infestation += 2 + extraStatus;
     events.push({
       type: "status_applied",
       target: "enemy",
       status: "infestation",
-      amount: 2,
+      amount: 2 + extraStatus,
       total: state.enemy.infestation,
     });
-    emitLog(events, "Flechette seeds the swarm with 2 infestation.");
+    emitLog(events, `Flechette seeds the swarm with ${2 + extraStatus} infestation.`);
     return;
   }
 
   if (state.enemy.id === "riot_droid") {
-    state.enemy.shred += 2;
+    state.enemy.shred += 2 + extraStatus;
     events.push({
       type: "status_applied",
       target: "enemy",
       status: "shred",
-      amount: 2,
+      amount: 2 + extraStatus,
       total: state.enemy.shred,
     });
     damageEnemy(state, 1, "Flechette", events, true);
-    emitLog(events, "Flechette strips 2 armor layers from future hits.");
+    emitLog(events, `Flechette strips ${2 + extraStatus} armor layers from future hits.`);
     return;
   }
 
@@ -294,12 +317,16 @@ const performReload = (state: CombatState, events: CombatEvent[]): void => {
   if (drawn.reshuffled) {
     emitLog(events, "Discard pile reshuffled into the draw pile.");
   }
+  if (hasAccessory(state, "quickloader_holster")) {
+    grantGuard(state, 3, events, ACCESSORY_DEFS.quickloader_holster.label);
+  }
 };
 
 export const createCombatState = (
   seed: number,
   enemyId: EnemyId,
   loadout: readonly BulletType[] = STARTER_LOADOUT,
+  accessories: readonly AccessoryId[] = [],
 ): CombatState => {
   const normalizedSeed = normalizeSeed(seed);
   const deckResult = createDeckState(loadout, normalizedSeed);
@@ -314,6 +341,7 @@ export const createCombatState = (
     enemy: createEnemyState(enemyId),
     deck: deckResult.deck,
     cylinder: createEmptyCylinder(),
+    accessories: [...accessories],
     over: false,
     outcome: null,
   };
@@ -372,6 +400,9 @@ export const stepCombat = (
         events,
         `Rotate ${CYLINDER_ROTATION_DIRECTION} to chamber ${nextState.cylinder.currentIndex + 1}.`,
       );
+      if (hasAccessory(nextState, "spring_ratchet")) {
+        grantGuard(nextState, 1, events, ACCESSORY_DEFS.spring_ratchet.label);
+      }
       break;
     case "spin": {
       const spun = spinCylinder(nextState.cylinder, nextState.seed);
@@ -447,6 +478,7 @@ export const getCombatSnapshot = (state: CombatState) => ({
     hp: state.player.hp,
     guard: state.player.guard,
   },
+  accessories: [...state.accessories],
   enemy: {
     id: state.enemy.id,
     label: state.enemy.label,

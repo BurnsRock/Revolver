@@ -106,3 +106,38 @@ Remaining note:
 TODOs / suggestions:
 - Revisit the `GREEDY_MATCHUP` heuristic; it obeys the requested rotate-to-best-round rule but currently loses badly to `FIRE_ONLY`, especially into Riot Droid.
 - Consider exposing loadout/enemy-set CLI flags in the sim if balancing moves beyond the starter roster.
+
+- Added a money + shop layer between combats.
+  - `CombatScene` now tracks persistent credits and owned accessories across the run.
+  - Non-final victories now award credits and open a shop overlay before the next encounter.
+  - Shop stock is generated deterministically from pure accessory content in `src/core/content/accessories.ts`.
+  - Shop supports mouse purchase, keyboard purchase (`1/2/3`), and a Continue button / `Enter`.
+- Added accessory mechanics in the combat core.
+  - `CombatState` now carries `accessories`.
+  - `createCombatState()` accepts accessories and `stepCombat()` applies their effects in pure logic.
+  - Current accessories:
+    - `Spring Ratchet`: rotate grants 1 guard
+    - `Quickloader Holster`: reload grants 3 guard
+    - `Shock Padding`: blank grants +4 extra guard
+    - `Rifled Tools`: slug and buckshot deal +1 damage
+    - `Shredder Tools`: flechette adds +1 shred / infestation
+    - `Tungsten Core`: armor piercing gains +2 vs armored targets
+    - `Honed Choke`: birdshot gains +1 stack clear / damage
+- Updated UI/docs/tests:
+  - README now documents the shop loop, shop controls, and how to add accessories.
+  - `src/core/resolve.test.ts` now covers three accessory effects.
+  - `test-actions.json` now drives the browser run into the first shop and purchases the first deterministic item.
+- Validation:
+  - `npx tsc --noEmit` passes.
+  - `npm test` passes with 9 tests.
+  - `npm run build` passes.
+  - `./run_playwright.ps1` passes with no captured browser errors.
+  - Latest `state-0.json` shows:
+    - `mode: "shop"`
+    - `money: 0`
+    - `accessories: ["shredder_tools"]`
+    - purchased first shop item reflected in `shop.stock` as `null`.
+
+TODOs / suggestions:
+- If run persistence should matter more, carry player HP between encounters or add healing options to the shop.
+- The shop currently uses one scene overlay; if a map layer is added later, move encounter order and other run-structure UI out of combat entirely.

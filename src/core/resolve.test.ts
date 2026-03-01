@@ -68,6 +68,35 @@ describe("combat matchups", () => {
     }
     expect(result.state.enemy.cycleIndex).toBe(0);
   });
+
+  it("quickloader holster grants guard on reload", () => {
+    const state = createCombatState(4, "riot_droid", undefined, ["quickloader_holster"]);
+    state.player.guard = 0;
+
+    const result = stepCombat(state, "reload");
+
+    expect(result.state.player.guard).toBe(3);
+  });
+
+  it("spring ratchet grants guard on rotate", () => {
+    const state = createCombatState(5, "riot_droid", undefined, ["spring_ratchet"]);
+    state.player.guard = 0;
+
+    const result = stepCombat(state, "rotate");
+
+    expect(result.state.player.guard).toBe(1);
+  });
+
+  it("shredder tools increases flechette shred on riot droid", () => {
+    const droidState = createCombatState(6, "riot_droid", undefined, ["shredder_tools"]);
+    const result = stepCombat(withBulletReady(droidState, "flechette"), "fire");
+
+    expect(result.state.enemy.id).toBe("riot_droid");
+    if (result.state.enemy.id !== "riot_droid") {
+      throw new Error("Expected riot droid result.");
+    }
+    expect(result.state.enemy.shred).toBe(2);
+  });
 });
 
 describe("cylinder rotation", () => {

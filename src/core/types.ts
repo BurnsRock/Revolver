@@ -10,6 +10,15 @@ export type BulletType =
   | "flechette"
   | "blank";
 
+export type AccessoryId =
+  | "spring_ratchet"
+  | "quickloader_holster"
+  | "shock_padding"
+  | "rifled_tools"
+  | "shredder_tools"
+  | "tungsten_core"
+  | "honed_choke";
+
 export type EnemyId = "rat_swarm" | "riot_droid" | "sniper" | "drone";
 
 export type EnemyTag =
@@ -31,6 +40,14 @@ export interface BulletDef {
   shortLabel: string;
   description: string;
   matchup: string;
+}
+
+export interface AccessoryDef {
+  id: AccessoryId;
+  label: string;
+  price: number;
+  description: string;
+  effect: string;
 }
 
 export interface EnemyIntentView {
@@ -100,6 +117,7 @@ export interface CombatState {
   enemy: EnemyState;
   deck: DeckState;
   cylinder: CylinderState;
+  accessories: AccessoryId[];
   over: boolean;
   outcome: CombatOutcome;
 }
