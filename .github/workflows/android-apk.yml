@@ -39,7 +39,11 @@ jobs:
       # Sync Capacitor Android project (copies web assets into android/)
       - name: Capacitor sync (Android)
         run: npx cap sync android
-
+        
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+       
       # Build a debug APK
       - name: Gradle assembleDebug
         working-directory: android
