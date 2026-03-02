@@ -26,7 +26,7 @@ import type {
   SniperState,
 } from "./types";
 
-const PLAYER_MAX_HP = 28;
+const PLAYER_MAX_HP = 35;
 const BLANK_GUARD = 6;
 
 const emitLog = (events: CombatEvent[], text: string): void => {

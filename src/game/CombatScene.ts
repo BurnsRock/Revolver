@@ -8,14 +8,24 @@ import {
 } from "../core/cylinder";
 import { createEnemyState, ENEMY_ORDER, getEnemyIntent } from "../core/content/enemies";
 import { createCombatState, getCombatSnapshot, stepCombat } from "../core/resolve";
-import type { AccessoryId, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
-import revolverProtoSpritesheetUrl from "../assets/images/revolver_proto_spritesheet.png";
+import type { AccessoryId, BulletType, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
 
 const GAME_WIDTH = 1180;
 const GAME_HEIGHT = 780;
-export const REVOLVER_PROTO_SPRITESHEET_KEY = "revolver-proto";
-export const REVOLVER_PROTO_IMAGE_KEY = "revolver-proto-image";
-const REVOLVER_PROTO_FRAME_SIZE = 128;
+const UI_TEXTURE_KEYS = {
+  player: "ui-player",
+  cylinder: "ui-cylinder",
+  rat_swarm: "ui-rat-swarm",
+  riot_droid: "ui-riot-droid",
+  sniper: "ui-sniper",
+  drone: "ui-drone",
+  birdshot: "ui-birdshot",
+  buckshot: "ui-buckshot",
+  slug: "ui-slug",
+  armor_piercing: "ui-armor-piercing",
+  flechette: "ui-flechette",
+  blank: "ui-blank",
+} as const;
 const CHAMBER_POSITIONS = [
   { x: 601, y: 123 },
   { x: 503, y: 203 },
@@ -64,29 +74,38 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   sniper: 14,
   drone: 18,
 };
-
-const ENEMY_PORTRAIT_CROPS: Record<EnemyId, { x: number; y: number; width: number; height: number }> = {
-  rat_swarm: { x: 384, y: 256, width: 256, height: 256 },
-  riot_droid: { x: 768, y: 256, width: 256, height: 256 },
-  sniper: { x: 512, y: 640, width: 256, height: 256 },
-  drone: { x: 1024, y: 256, width: 256, height: 256 },
+const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
+  rat_swarm: UI_TEXTURE_KEYS.rat_swarm,
+  riot_droid: UI_TEXTURE_KEYS.riot_droid,
+  sniper: UI_TEXTURE_KEYS.sniper,
+  drone: UI_TEXTURE_KEYS.drone,
 };
-
-const PLAYER_PORTRAIT_CROP = { x: 128, y: 256, width: 256, height: 256 };
-const CYLINDER_CROP = { x: 1024, y: 640, width: 256, height: 256 };
-const PROTO_FRAME_NAMES = {
-  player: "proto-player",
-  rat_swarm: "proto-rat-swarm",
-  riot_droid: "proto-riot-droid",
-  sniper: "proto-sniper",
-  drone: "proto-drone",
-  cylinder: "proto-cylinder",
-} as const;
+const cylinderImageUrl = new URL("../assets/images/initial/CYLINDER.PNG", import.meta.url).href;
+const birdshotImageUrl = new URL("../assets/images/initial/BIRD.PNG", import.meta.url).href;
+const buckshotImageUrl = new URL("../assets/images/initial/BUCK.PNG", import.meta.url).href;
+const blankImageUrl = new URL("../assets/images/initial/BLANK.PNG", import.meta.url).href;
+const droneImageUrl = new URL("../assets/images/initial/DRONE.PNG", import.meta.url).href;
+const flechetteImageUrl = new URL("../assets/images/initial/FLECHETTES.PNG", import.meta.url).href;
+const playerImageUrl = new URL("../assets/images/initial/PLAYER.PNG", import.meta.url).href;
+const ratSwarmImageUrl = new URL("../assets/images/initial/RAT SWARM.PNG", import.meta.url).href;
+const riotDroidImageUrl = new URL("../assets/images/initial/RIOT DROID.PNG", import.meta.url).href;
+const slugImageUrl = new URL("../assets/images/initial/SLUG.PNG", import.meta.url).href;
+const sniperImageUrl = new URL("../assets/images/initial/SNIPER.PNG", import.meta.url).href;
+const armorPiercingImageUrl = new URL("../assets/images/initial/AP.PNG", import.meta.url).href;
+const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
+  birdshot: UI_TEXTURE_KEYS.birdshot,
+  buckshot: UI_TEXTURE_KEYS.buckshot,
+  slug: UI_TEXTURE_KEYS.slug,
+  armor_piercing: UI_TEXTURE_KEYS.armor_piercing,
+  flechette: UI_TEXTURE_KEYS.flechette,
+  blank: UI_TEXTURE_KEYS.blank,
+};
 
 type ScreenMode = "combat" | "shop";
 
 type ChamberVisual = {
   box: Phaser.GameObjects.Rectangle;
+  art: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
   index: Phaser.GameObjects.Text;
 };
@@ -103,12 +122,8 @@ type ShopOptionVisual = {
 };
 
 type UiSpriteSet = {
-  credits: Phaser.GameObjects.Image;
   player: Phaser.GameObjects.Image;
   enemy: Phaser.GameObjects.Image;
-  accessories: Phaser.GameObjects.Image;
-  log: Phaser.GameObjects.Image;
-  shop: Phaser.GameObjects.Image;
   cylinder: Phaser.GameObjects.Image;
 };
 
@@ -167,7 +182,6 @@ export class CombatScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.ensureProtoFrames();
     this.createBackground();
     this.createHud();
     this.bindInputs();
@@ -175,11 +189,18 @@ export class CombatScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image(REVOLVER_PROTO_IMAGE_KEY, revolverProtoSpritesheetUrl);
-    this.load.spritesheet(REVOLVER_PROTO_SPRITESHEET_KEY, revolverProtoSpritesheetUrl, {
-      frameWidth: REVOLVER_PROTO_FRAME_SIZE,
-      frameHeight: REVOLVER_PROTO_FRAME_SIZE,
-    });
+    this.load.image(UI_TEXTURE_KEYS.player, playerImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.cylinder, cylinderImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.rat_swarm, ratSwarmImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.riot_droid, riotDroidImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.sniper, sniperImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.drone, droneImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.birdshot, birdshotImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.buckshot, buckshotImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.slug, slugImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.armor_piercing, armorPiercingImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.flechette, flechetteImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.blank, blankImageUrl);
   }
 
   public renderGameToText(): string {
@@ -213,24 +234,6 @@ export class CombatScene extends Phaser.Scene {
     this.refreshUi();
   }
 
-  private ensureProtoFrames(): void {
-    const texture = this.textures.get(REVOLVER_PROTO_IMAGE_KEY);
-    const frameSpecs: Array<[string, { x: number; y: number; width: number; height: number }]> = [
-      [PROTO_FRAME_NAMES.player, PLAYER_PORTRAIT_CROP],
-      [PROTO_FRAME_NAMES.rat_swarm, ENEMY_PORTRAIT_CROPS.rat_swarm],
-      [PROTO_FRAME_NAMES.riot_droid, ENEMY_PORTRAIT_CROPS.riot_droid],
-      [PROTO_FRAME_NAMES.sniper, ENEMY_PORTRAIT_CROPS.sniper],
-      [PROTO_FRAME_NAMES.drone, ENEMY_PORTRAIT_CROPS.drone],
-      [PROTO_FRAME_NAMES.cylinder, CYLINDER_CROP],
-    ];
-
-    frameSpecs.forEach(([name, crop]) => {
-      if (!texture.has(name)) {
-        texture.add(name, 0, crop.x, crop.y, crop.width, crop.height);
-      }
-    });
-  }
-
   private createBackground(): void {
     const bg = this.add.graphics();
     bg.fillGradientStyle(0x11141a, 0x11141a, 0x1e2631, 0x1e2631, 1);
@@ -261,9 +264,6 @@ export class CombatScene extends Phaser.Scene {
       color: "#f4ddb0",
     });
 
-    const creditsIcon = this.add.image(776, 52, REVOLVER_PROTO_SPRITESHEET_KEY, 17);
-    creditsIcon.setScale(0.34);
-
     this.moneyText = this.add.text(938, 40, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "24px",
@@ -282,23 +282,19 @@ export class CombatScene extends Phaser.Scene {
       fontSize: "16px",
       color: "#fff6db",
     });
-    logButtonLabel.setOrigin(0.55, 0.5);
+    logButtonLabel.setOrigin(0.5);
     logButtonLabel.setDepth(45);
-
-    const logIcon = this.add.image(1018, 52, REVOLVER_PROTO_SPRITESHEET_KEY, 90);
-    logIcon.setScale(0.34);
-    logIcon.setDepth(45);
 
     this.logToggleButton = {
       box: logButtonBox,
       label: logButtonLabel,
     };
 
-    const playerIcon = this.add.image(98, 134, REVOLVER_PROTO_IMAGE_KEY, PROTO_FRAME_NAMES.player);
+    const playerIcon = this.add.image(208, 354, UI_TEXTURE_KEYS.player);
     playerIcon.setOrigin(0.5);
     playerIcon.setDisplaySize(96, 96);
 
-    this.playerText = this.add.text(46, 144, "", {
+    this.playerText = this.add.text(60, 115, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "24px",
       color: "#f4ddb0",
@@ -306,11 +302,11 @@ export class CombatScene extends Phaser.Scene {
       wordWrap: { width: 330 },
     });
 
-    const enemyIcon = this.add.image(860, 172, REVOLVER_PROTO_IMAGE_KEY, PROTO_FRAME_NAMES.rat_swarm);
+    const enemyIcon = this.add.image(980, 354, ENEMY_TEXTURE_KEYS.rat_swarm);
     enemyIcon.setOrigin(0.5);
     enemyIcon.setDisplaySize(122, 122);
 
-    this.enemyText = this.add.text(790, 176, "", {
+    this.enemyText = this.add.text(800, 115, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "24px",
       color: "#f7b87c",
@@ -318,13 +314,13 @@ export class CombatScene extends Phaser.Scene {
       wordWrap: { width: 300 },
     });
 
-    this.enemyIntentText = this.add.text(790, 294, "", {
+    this.enemyIntentText = this.add.text(800, 180, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "20px",
       color: "#d7dee8",
     });
 
-    this.enemyIntentDetailText = this.add.text(790, 322, "", {
+    this.enemyIntentDetailText = this.add.text(800, 210, "", {
       fontFamily: "Georgia, serif",
       fontSize: "28px",
       color: "#f7b87c",
@@ -338,7 +334,7 @@ export class CombatScene extends Phaser.Scene {
       color: "#f4ddb0",
     });
 
-    const cylinderArt = this.add.image(600, 254, REVOLVER_PROTO_IMAGE_KEY, PROTO_FRAME_NAMES.cylinder);
+    const cylinderArt = this.add.image(600, 254, UI_TEXTURE_KEYS.cylinder);
     cylinderArt.setDisplaySize(184, 184);
     cylinderArt.setAlpha(0.26);
 
@@ -349,22 +345,27 @@ export class CombatScene extends Phaser.Scene {
       box.on("pointerover", () => this.showBulletTooltip(index));
       box.on("pointerout", () => this.hideBulletTooltip());
 
-      const label = this.add.text(position.x, position.y - 6, "", {
+      const art = this.add.image(position.x, position.y - 8, UI_TEXTURE_KEYS.slug);
+      art.setOrigin(0.5);
+      art.setVisible(false);
+
+      const label = this.add.text(position.x, position.y + 16, "", {
         fontFamily: "Courier New, monospace",
-        fontSize: "24px",
+        fontSize: "16px",
         color: "#e9edf2",
       });
       label.setOrigin(0.5);
 
-      const chamberIndex = this.add.text(position.x, position.y + 28, `${index + 1}`, {
+      const chamberIndex = this.add.text(position.x, position.y + 34, `${index + 1}`, {
         fontFamily: "Trebuchet MS, sans-serif",
-        fontSize: "16px",
+        fontSize: "14px",
         color: "#9eb0c5",
       });
       chamberIndex.setOrigin(0.5);
 
       this.chamberVisuals.push({
         box,
+        art,
         label,
         index: chamberIndex,
       });
@@ -373,11 +374,7 @@ export class CombatScene extends Phaser.Scene {
     const centerRing = this.add.circle(600, 252, 32, 0x121820, 0.95);
     centerRing.setStrokeStyle(3, 0xb69042, 0.95);
 
-    const accessoryIcon = this.add.image(458, 454, REVOLVER_PROTO_SPRITESHEET_KEY, 90);
-    accessoryIcon.setOrigin(0.5);
-    accessoryIcon.setScale(0.34);
-
-    this.accessoryHeaderText = this.add.text(480, 442, "", {
+    this.accessoryHeaderText = this.add.text(444, 442, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "16px",
       color: "#aeb9c8",
@@ -508,11 +505,6 @@ export class CombatScene extends Phaser.Scene {
     this.shopTitleText.setDepth(42);
     this.shopTitleText.setVisible(false);
 
-    const shopIcon = this.add.image(GAME_WIDTH / 2 - 110, 152, REVOLVER_PROTO_SPRITESHEET_KEY, 20);
-    shopIcon.setScale(0.42);
-    shopIcon.setDepth(42);
-    shopIcon.setVisible(false);
-
     this.shopMoneyText = this.add.text(GAME_WIDTH / 2, 182, "", {
       fontFamily: "Trebuchet MS, sans-serif",
       fontSize: "24px",
@@ -592,12 +584,8 @@ export class CombatScene extends Phaser.Scene {
     };
 
     this.uiSprites = {
-      credits: creditsIcon,
       player: playerIcon,
       enemy: enemyIcon,
-      accessories: accessoryIcon,
-      log: logIcon,
-      shop: shopIcon,
       cylinder: cylinderArt,
     };
   }
@@ -1009,7 +997,6 @@ export class CombatScene extends Phaser.Scene {
     this.shopHintText.setVisible(shopVisible);
     this.shopContinueButton.box.setVisible(shopVisible);
     this.shopContinueButton.label.setVisible(shopVisible);
-    this.uiSprites.shop.setVisible(shopVisible);
 
     if (!shopVisible) {
       this.shopOptionVisuals.forEach((option) => {
@@ -1062,7 +1049,6 @@ export class CombatScene extends Phaser.Scene {
     this.logToggleButton.box.setFillStyle(this.logOpen ? 0x8f6422 : 0x223246, 0.95);
     this.logToggleButton.box.setStrokeStyle(2, 0xf1c66b, 0.95);
     this.logToggleButton.label.setColor(this.logOpen ? "#fff6db" : "#d7dee8");
-    this.uiSprites.log.setAlpha(this.logOpen ? 1 : 0.88);
 
     if (!this.logOpen) {
       return;
@@ -1106,6 +1092,12 @@ export class CombatScene extends Phaser.Scene {
     advanceOneStep();
   }
 
+  private fitImageToBox(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number): void {
+    const frame = image.frame;
+    const scale = Math.min(maxWidth / frame.realWidth, maxHeight / frame.realHeight);
+    image.setScale(scale);
+  }
+
   private layoutChambers(animated: boolean, currentIndex: number): void {
     const order = getCylinderOrder({
       ...this.state.cylinder,
@@ -1117,8 +1109,9 @@ export class CombatScene extends Phaser.Scene {
       const target = CHAMBER_POSITIONS[slotIndex];
       const targets = [
         { object: visual.box, x: target.x, y: target.y },
-        { object: visual.label, x: target.x, y: target.y - 6 },
-        { object: visual.index, x: target.x, y: target.y + 28 },
+        { object: visual.art, x: target.x, y: target.y - 8 },
+        { object: visual.label, x: target.x, y: target.y + 16 },
+        { object: visual.index, x: target.x, y: target.y + 34 },
       ];
 
       targets.forEach(({ object, x, y }) => {
@@ -1185,12 +1178,20 @@ export class CombatScene extends Phaser.Scene {
       visual.box.setStrokeStyle(strokeWidth, strokeColor, 1);
       visual.box.setDepth(depth);
       visual.box.setScale(boxScale);
+      if (round) {
+        visual.art.setTexture(BULLET_TEXTURE_KEYS[round]);
+        visual.art.setVisible(true);
+        visual.art.setDepth(depth + 1);
+        this.fitImageToBox(visual.art, 34 * boxScale, 44 * boxScale);
+      } else {
+        visual.art.setVisible(false);
+      }
       visual.label.setText(bullet ? bullet.shortLabel : "--");
       visual.label.setColor(labelColor);
-      visual.label.setDepth(depth + 1);
+      visual.label.setDepth(depth + 2);
       visual.label.setScale(textScale);
       visual.index.setColor(indexColor);
-      visual.index.setDepth(depth + 1);
+      visual.index.setDepth(depth + 2);
       visual.index.setScale(textScale);
     });
     this.layoutChambers(animated, this.displayCurrentIndex);
@@ -1202,7 +1203,7 @@ export class CombatScene extends Phaser.Scene {
     const shopVisible = this.mode === "shop";
 
     this.moneyText.setText(`Credits $${this.money}`);
-    this.uiSprites.enemy.setFrame(PROTO_FRAME_NAMES[this.state.enemy.id]);
+    this.uiSprites.enemy.setTexture(ENEMY_TEXTURE_KEYS[this.state.enemy.id]);
 
     this.playerText.setText(
       `PLAYER\nHP ${this.state.player.hp}/${this.state.player.maxHp}\nGuard ${this.state.player.guard}`,

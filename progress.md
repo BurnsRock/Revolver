@@ -141,3 +141,23 @@ TODOs / suggestions:
 TODOs / suggestions:
 - If run persistence should matter more, carry player HP between encounters or add healing options to the shop.
 - The shop currently uses one scene overlay; if a map layer is added later, move encounter order and other run-structure UI out of combat entirely.
+
+- Art swap: removed the old `revolver_proto_spritesheet.png` dependency from `src/game/CombatScene.ts`.
+  - HUD portraits, cylinder art, and decorative icons now load directly from `src/assets/images/initial/*.PNG` via `new URL(..., import.meta.url).href`.
+  - Enemy portrait swapping now uses `setTexture()` with explicit per-enemy texture keys instead of cropped sheet frames.
+- Validation:
+  - `npx tsc --noEmit` passes after the asset swap.
+  - `npm run build` passes after the asset swap.
+  - `./run_playwright.ps1` passes with no `output/web-game/errors-*.json` files produced.
+  - Reviewed `output/web-game/shot-0.png` and confirmed the combat HUD is rendering the new `initial` assets for player, rat swarm, cylinder, credits, log, and accessories.
+  - Current scripted Playwright path still ends in defeat before opening the shop, so the shop-only icon was not visually exercised in this run.
+
+- UI cleanup: removed the fake semantic icon mappings introduced during the first `initial/` asset swap.
+  - The HUD no longer assigns unrelated files to credits, log, shop, or accessories.
+  - Chamber slots now render the real bullet art from `src/assets/images/initial/` (`AP`, `BIRD`, `BLANK`, `BUCK`, `FLECHETTES`, `SLUG`) using per-bullet texture keys.
+  - Credits, log, shop, and accessories are now text-only labels unless dedicated art is added later.
+- Validation:
+  - `npx tsc --noEmit` passes after the chamber art update.
+  - `npm run build` passes after the chamber art update.
+  - `./run_playwright.ps1` passes with no browser errors captured.
+  - Reviewed `output/web-game/shot-0.png` and confirmed loaded chambers show the correct ammo art while the credits/log/accessories UI remains text-only.
