@@ -1,0 +1,56 @@
+name: Demo Release (Web + Android)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-release
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java (21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+
+      - name: Install deps
+        run: npm ci
+
+      # ---- WEB BUILD ----
+      - name: Build web (dist/)
+        run: npm run build
+
+      - name: Zip web build
+        run: |
+          cd dist
+          zip -r ../revolver-web-${GITHUB_SHA::7}.zip .
+          cd ..
+
+      # ---- ANDROID BUILD ----
+      - name: Capacitor sync (Android)
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod
