@@ -53,4 +53,36 @@ jobs:
 
       - name: Make gradlew executable
         working-directory: android
-        run: chmod
+        run: chmod +x gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Collect release assets
+        run: |
+          mkdir -p release
+          cp revolver-web-${GITHUB_SHA::7}.zip release/
+          cp android/app/build/outputs/apk/debug/app-debug.apk release/revolver-android-${GITHUB_SHA::7}.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk release/revolver-android-latest.apk
+          cp revolver-web-${GITHUB_SHA::7}.zip release/revolver-web-latest.zip
+
+      # Keep a stable "latest demo" tag
+      - name: Move demo tag to this commit
+        run: |
+          git tag -f demo-latest
+          git push -f origin demo-latest
+
+      - name: Create/Update GitHub Release (demo-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: demo-latest
+          name: "Demo (latest)"
+          prerelease: true
+          files: |
+            release/revolver-web-${GITHUB_SHA::7}.zip
+            release/revolver-web-latest.zip
+            release/revolver-android-${GITHUB_SHA::7}.apk
+            release/revolver-android-latest.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
