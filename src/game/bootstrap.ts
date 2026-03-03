@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { CombatScene, GAME_BOUNDS } from "./CombatScene";
 
 export const createGame = (): Phaser.Game => {
+  const isAndroid = /Android/i.test(navigator.userAgent);
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.CANVAS,
     width: GAME_BOUNDS.width,
@@ -12,6 +13,18 @@ export const createGame = (): Phaser.Game => {
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+      expandParent: true,
+      autoRound: true,
+      min: {
+        width: 960,
+        height: 640,
+      },
+      max: isAndroid
+        ? {
+            width: GAME_BOUNDS.width,
+            height: GAME_BOUNDS.height,
+          }
+        : undefined,
     },
   };
 

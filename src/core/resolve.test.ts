@@ -21,6 +21,15 @@ const withBulletReady = (state: CombatState, bullet: BulletType): CombatState =>
   },
 });
 
+const withLoadedCylinder = (state: CombatState, bullets: BulletType[]): CombatState => ({
+  ...state,
+  cylinder: loadCylinder(createEmptyCylinder(), bullets),
+  deck: {
+    draw: [],
+    discard: [],
+  },
+});
+
 describe("combat matchups", () => {
   it("birdshot clears multiple rat swarm stacks while slug only clears one", () => {
     const birdshotState = withBulletReady(createCombatState(1, "rat_swarm"), "birdshot");
@@ -96,6 +105,107 @@ describe("combat matchups", () => {
       throw new Error("Expected riot droid result.");
     }
     expect(result.state.enemy.shred).toBe(2);
+  });
+
+  it("combo bonus increases consecutive offensive shots", () => {
+    let state = withLoadedCylinder(createCombatState(7, "drone"), ["armor_piercing", "armor_piercing"]);
+
+    const first = stepCombat(state, "fire");
+    expect(first.state.combo).toBe(1);
+    expect(first.state.enemy.hp).toBe(21);
+
+    state = first.state;
+    const second = stepCombat(state, "fire");
+
+    expect(second.state.combo).toBe(2);
+    expect(second.state.enemy.hp).toBe(17);
+    expect(second.events.some((event) => event.type === "log" && event.text.includes("Combo +1"))).toBe(true);
+  });
+
+  it("blank shots break combo", () => {
+    let state = withLoadedCylinder(createCombatState(8, "drone"), ["slug", "blank", "slug"]);
+
+    state = stepCombat(state, "fire").state;
+    expect(state.combo).toBe(1);
+
+    const blank = stepCombat(state, "fire");
+
+    expect(blank.state.combo).toBe(0);
+  });
+
+  it("flechette clears a stack immediately and seeds heavier infestation on rat swarm", () => {
+    const swarmState = createCombatState(9, "rat_swarm");
+    const result = stepCombat(withBulletReady(swarmState, "flechette"), "fire");
+
+    expect(result.state.enemy.id).toBe("rat_swarm");
+    if (result.state.enemy.id !== "rat_swarm") {
+      throw new Error("Expected rat swarm result.");
+    }
+    expect(result.state.enemy.stacks).toBe(4);
+    expect(result.state.enemy.infestation).toBe(2);
+  });
+
+  it("heat 3 through 5 deals escalating self-damage on consecutive shots", () => {
+    let state = withLoadedCylinder(
+      createCombatState(10, "riot_droid"),
+      ["blank", "blank", "blank", "blank", "blank", "blank"],
+    );
+    state.enemy.cycleIndex = 3;
+    state.player.guard = 99;
+
+    state = stepCombat(state, "fire").state;
+    state = stepCombat(state, "fire").state;
+    state = stepCombat(state, "fire").state;
+    expect(state.heat).toBe(3);
+    expect(state.player.hp).toBe(34);
+
+    state = stepCombat(state, "fire").state;
+    expect(state.heat).toBe(4);
+    expect(state.player.hp).toBe(32);
+
+    state = stepCombat(state, "fire").state;
+    expect(state.heat).toBe(5);
+    expect(state.player.hp).toBe(29);
+  });
+
+  it("heat 6 skips the next turn and resets back to 0", () => {
+    let state = withLoadedCylinder(
+      createCombatState(11, "riot_droid"),
+      ["blank", "blank", "blank", "blank", "blank", "blank"],
+    );
+    state.enemy.cycleIndex = 3;
+    state.player.guard = 99;
+
+    for (let i = 0; i < 5; i += 1) {
+      state = stepCombat(state, "fire").state;
+    }
+
+    const result = stepCombat(state, "fire");
+
+    expect(result.state.heat).toBe(0);
+    expect(result.state.turn).toBe(state.turn + 2);
+    expect(result.state.enemy.id).toBe("riot_droid");
+    if (result.state.enemy.id !== "riot_droid") {
+      throw new Error("Expected riot droid result.");
+    }
+    expect(result.state.enemy.cycleIndex).toBe(2);
+    expect(result.events.some((event) => event.type === "log" && event.text.includes("too hot to hold"))).toBe(
+      true,
+    );
+  });
+
+  it("non-fire actions reset heat", () => {
+    let state = withLoadedCylinder(createCombatState(12, "riot_droid"), ["blank", "blank", "blank"]);
+    state.enemy.cycleIndex = 3;
+    state.player.guard = 99;
+
+    state = stepCombat(state, "fire").state;
+    state = stepCombat(state, "fire").state;
+    expect(state.heat).toBe(2);
+
+    const rotated = stepCombat(state, "rotate");
+
+    expect(rotated.state.heat).toBe(0);
   });
 });
 

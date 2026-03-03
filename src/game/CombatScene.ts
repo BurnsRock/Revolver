@@ -1,13 +1,13 @@
 import Phaser from "phaser";
-import { ACCESSORY_DEFS, createShopStock } from "../core/content/accessories";
+import { ACCESSORY_DEFS } from "../core/content/accessories";
 import { BULLET_DEFS } from "../core/content/bullets";
 import {
   CYLINDER_ROTATION_DIRECTION,
   findNextLoadedChamberIndex,
   getCylinderOrder,
 } from "../core/cylinder";
-import { createEnemyState, ENEMY_ORDER, getEnemyIntent } from "../core/content/enemies";
-import { createCombatState, getCombatSnapshot, stepCombat } from "../core/resolve";
+import { getEnemyIntent } from "../core/content/enemies";
+import { CombatSession } from "./CombatSession";
 import type { AccessoryId, BulletType, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
 
 const GAME_WIDTH = 1180;
@@ -57,8 +57,8 @@ const BULLET_TOOLTIP_LINES = {
     effectiveVs: "Armored targets",
   },
   flechette: {
-    damage: "1 direct, or 2 infestation vs swarm",
-    effect: "Shreds armor or seeds damage over time",
+    damage: "2 direct, or 1 stack + 3 infestation vs swarm",
+    effect: "Shreds armor or seeds stacked targets for collapse",
     effectiveVs: "Armored or stacked targets",
   },
   blank: {
@@ -101,8 +101,6 @@ const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
   blank: UI_TEXTURE_KEYS.blank,
 };
 
-type ScreenMode = "combat" | "shop";
-
 type ChamberVisual = {
   box: Phaser.GameObjects.Rectangle;
   art: Phaser.GameObjects.Image;
@@ -130,16 +128,8 @@ type UiSpriteSet = {
 export class CombatScene extends Phaser.Scene {
   public static readonly SCENE_KEY = "CombatScene";
 
-  private encounterIndex = 0;
-  private seedBase = 1337;
-  private shopSeed = 4001;
-  private mode: ScreenMode = "combat";
-  private money = 0;
-  private ownedAccessories: AccessoryId[] = [];
-  private shopStock: Array<AccessoryId | null> = [];
-  private state!: CombatState;
+  private readonly session = new CombatSession();
   private lastAdvanceMs = 0;
-  private logs: string[] = [];
 
   private titleText!: Phaser.GameObjects.Text;
   private moneyText!: Phaser.GameObjects.Text;
@@ -166,6 +156,20 @@ export class CombatScene extends Phaser.Scene {
   private shopMoneyText!: Phaser.GameObjects.Text;
   private shopHintText!: Phaser.GameObjects.Text;
   private shopContinueButton!: ActionButton;
+  private mainMenuOverlay!: Phaser.GameObjects.Rectangle;
+  private mainMenuPanel!: Phaser.GameObjects.Rectangle;
+  private mainMenuTitleText!: Phaser.GameObjects.Text;
+  private mainMenuStartButton!: ActionButton;
+  private deathOverlay!: Phaser.GameObjects.Rectangle;
+  private deathPanel!: Phaser.GameObjects.Rectangle;
+  private deathTitleText!: Phaser.GameObjects.Text;
+  private deathBodyText!: Phaser.GameObjects.Text;
+  private deathRestartButton!: ActionButton;
+  private victoryOverlay!: Phaser.GameObjects.Rectangle;
+  private victoryPanel!: Phaser.GameObjects.Rectangle;
+  private victoryTitleText!: Phaser.GameObjects.Text;
+  private victoryBodyText!: Phaser.GameObjects.Text;
+  private victoryRestartButton!: ActionButton;
   private hasPositionedChambers = false;
   private displayCurrentIndex = 0;
   private rotationAnimationToken = 0;
@@ -186,6 +190,8 @@ export class CombatScene extends Phaser.Scene {
     this.createHud();
     this.bindInputs();
     this.startRun();
+    this.session.openMainMenu();
+    this.refreshUi();
   }
 
   preload(): void {
@@ -204,29 +210,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   public renderGameToText(): string {
-    const snapshot = getCombatSnapshot(this.state);
-    const { accessories: _combatAccessories, ...snapshotWithoutAccessories } = snapshot;
-    return JSON.stringify({
-      coordinateSystem:
-        "UI-only combat state. Chamber indices run left-to-right, top row then bottom row.",
-      mode: this.mode,
-      money: this.money,
-      accessories: [...this.ownedAccessories],
-      shop:
-        this.mode === "shop"
-          ? {
-              stock: [...this.shopStock],
-            }
-          : null,
-      encounter: {
-        index: this.encounterIndex + 1,
-        total: ENEMY_ORDER.length,
-        next: this.getNextEncounterLabel(),
-      },
-      lastAdvanceMs: this.lastAdvanceMs,
-      logs: this.logs.slice(-6),
-      ...snapshotWithoutAccessories,
-    });
+    return this.session.createRenderPayload(this.lastAdvanceMs);
   }
 
   public advanceTime(ms: number): void {
@@ -583,6 +567,146 @@ export class CombatScene extends Phaser.Scene {
       label: continueLabel,
     };
 
+    this.mainMenuOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05090f, 0.9);
+    this.mainMenuOverlay.setDepth(60);
+    this.mainMenuOverlay.setVisible(false);
+
+    this.mainMenuPanel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 620, 340, 0x15212d, 0.98);
+    this.mainMenuPanel.setStrokeStyle(3, 0xf1c66b, 0.95);
+    this.mainMenuPanel.setDepth(61);
+    this.mainMenuPanel.setVisible(false);
+
+    this.mainMenuTitleText = this.add.text(GAME_WIDTH / 2, 290, "Revolver Chamber Tactics", {
+      fontFamily: "Georgia, serif",
+      fontSize: "52px",
+      color: "#f4ddb0",
+      align: "center",
+    });
+    this.mainMenuTitleText.setOrigin(0.5);
+    this.mainMenuTitleText.setDepth(62);
+    this.mainMenuTitleText.setVisible(false);
+
+    const startBox = this.add.rectangle(GAME_WIDTH / 2, 430, 240, 58, 0x8f6422, 0.95);
+    startBox.setStrokeStyle(2, 0xf1c66b, 1);
+    startBox.setDepth(62);
+    startBox.setVisible(false);
+    startBox.setInteractive({ useHandCursor: true });
+    startBox.on("pointerdown", () => this.beginFromMainMenu());
+
+    const startLabel = this.add.text(GAME_WIDTH / 2, 430, "START", {
+      fontFamily: "Trebuchet MS, sans-serif",
+      fontSize: "26px",
+      color: "#fff6db",
+    });
+    startLabel.setOrigin(0.5);
+    startLabel.setDepth(63);
+    startLabel.setVisible(false);
+
+    this.mainMenuStartButton = {
+      box: startBox,
+      label: startLabel,
+    };
+
+    this.deathOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05090f, 0.92);
+    this.deathOverlay.setDepth(60);
+    this.deathOverlay.setVisible(false);
+
+    this.deathPanel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 660, 360, 0x2d1418, 0.98);
+    this.deathPanel.setStrokeStyle(3, 0xf1c66b, 0.95);
+    this.deathPanel.setDepth(61);
+    this.deathPanel.setVisible(false);
+
+    this.deathTitleText = this.add.text(GAME_WIDTH / 2, 280, "Defeat", {
+      fontFamily: "Georgia, serif",
+      fontSize: "62px",
+      color: "#f7b87c",
+      align: "center",
+    });
+    this.deathTitleText.setOrigin(0.5);
+    this.deathTitleText.setDepth(62);
+    this.deathTitleText.setVisible(false);
+
+    this.deathBodyText = this.add.text(GAME_WIDTH / 2, 350, "The chamber falls silent.", {
+      fontFamily: "Trebuchet MS, sans-serif",
+      fontSize: "26px",
+      color: "#d7dee8",
+      align: "center",
+    });
+    this.deathBodyText.setOrigin(0.5);
+    this.deathBodyText.setDepth(62);
+    this.deathBodyText.setVisible(false);
+
+    const restartBox = this.add.rectangle(GAME_WIDTH / 2, 440, 260, 58, 0x8f6422, 0.95);
+    restartBox.setStrokeStyle(2, 0xf1c66b, 1);
+    restartBox.setDepth(62);
+    restartBox.setVisible(false);
+    restartBox.setInteractive({ useHandCursor: true });
+    restartBox.on("pointerdown", () => this.restartFromDeathScreen());
+
+    const restartLabel = this.add.text(GAME_WIDTH / 2, 440, "RESTART", {
+      fontFamily: "Trebuchet MS, sans-serif",
+      fontSize: "26px",
+      color: "#fff6db",
+    });
+    restartLabel.setOrigin(0.5);
+    restartLabel.setDepth(63);
+    restartLabel.setVisible(false);
+
+    this.deathRestartButton = {
+      box: restartBox,
+      label: restartLabel,
+    };
+
+    this.victoryOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05090f, 0.92);
+    this.victoryOverlay.setDepth(60);
+    this.victoryOverlay.setVisible(false);
+
+    this.victoryPanel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 660, 360, 0x162919, 0.98);
+    this.victoryPanel.setStrokeStyle(3, 0xf1c66b, 0.95);
+    this.victoryPanel.setDepth(61);
+    this.victoryPanel.setVisible(false);
+
+    this.victoryTitleText = this.add.text(GAME_WIDTH / 2, 280, "Victory", {
+      fontFamily: "Georgia, serif",
+      fontSize: "62px",
+      color: "#f4ddb0",
+      align: "center",
+    });
+    this.victoryTitleText.setOrigin(0.5);
+    this.victoryTitleText.setDepth(62);
+    this.victoryTitleText.setVisible(false);
+
+    this.victoryBodyText = this.add.text(GAME_WIDTH / 2, 350, "Every enemy in the chamber is down.", {
+      fontFamily: "Trebuchet MS, sans-serif",
+      fontSize: "26px",
+      color: "#d7dee8",
+      align: "center",
+    });
+    this.victoryBodyText.setOrigin(0.5);
+    this.victoryBodyText.setDepth(62);
+    this.victoryBodyText.setVisible(false);
+
+    const victoryRestartBox = this.add.rectangle(GAME_WIDTH / 2, 440, 260, 58, 0x8f6422, 0.95);
+    victoryRestartBox.setStrokeStyle(2, 0xf1c66b, 1);
+    victoryRestartBox.setDepth(62);
+    victoryRestartBox.setVisible(false);
+    victoryRestartBox.setInteractive({ useHandCursor: true });
+    victoryRestartBox.on("pointerdown", () => this.restartFromVictoryScreen());
+
+    const victoryRestartLabel = this.add.text(GAME_WIDTH / 2, 440, "RESTART", {
+      fontFamily: "Trebuchet MS, sans-serif",
+      fontSize: "26px",
+      color: "#fff6db",
+    });
+    victoryRestartLabel.setOrigin(0.5);
+    victoryRestartLabel.setDepth(63);
+    victoryRestartLabel.setVisible(false);
+
+    this.victoryRestartButton = {
+      box: victoryRestartBox,
+      label: victoryRestartLabel,
+    };
+
     this.uiSprites = {
       player: playerIcon,
       enemy: enemyIcon,
@@ -606,43 +730,37 @@ export class CombatScene extends Phaser.Scene {
     keyboard.on("keydown-UP", () => this.performAction("reload"));
 
     keyboard.on("keydown-ONE", () => {
-      if (this.mode === "shop") {
+      if (this.session.getMode() === "shop") {
         this.buyShopAccessory(0);
       } else {
         this.startEncounter("rat_swarm");
       }
     });
     keyboard.on("keydown-TWO", () => {
-      if (this.mode === "shop") {
+      if (this.session.getMode() === "shop") {
         this.buyShopAccessory(1);
       } else {
         this.startEncounter("riot_droid");
       }
     });
     keyboard.on("keydown-THREE", () => {
-      if (this.mode === "shop") {
+      if (this.session.getMode() === "shop") {
         this.buyShopAccessory(2);
       } else {
         this.startEncounter("sniper");
       }
     });
     keyboard.on("keydown-FOUR", () => {
-      if (this.mode !== "shop") {
+      if (this.session.getMode() !== "shop") {
         this.startEncounter("drone");
       }
     });
 
     keyboard.on("keydown-ENTER", () => {
-      if (this.mode === "shop") {
-        this.leaveShop();
-        return;
+      if (this.session.continueWithEnter()) {
+        this.syncEncounterVisualState();
       }
-
-      if (this.state.over && this.state.outcome === "victory" && this.hasNextEncounter()) {
-        this.openShop();
-      } else {
-        this.startRun();
-      }
+      this.refreshUi();
     });
 
     keyboard.on("keydown-X", () => this.toggleFullscreen());
@@ -658,139 +776,65 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private startRun(): void {
-    this.mode = "combat";
-    this.money = 0;
-    this.ownedAccessories = [];
-    this.shopStock = [];
-    this.seedBase = 1337;
-    this.shopSeed = 4001;
-    this.startEncounter(ENEMY_ORDER[0]);
+    this.session.startRun();
+    this.syncEncounterVisualState();
+    this.refreshUi();
   }
 
-  private hasNextEncounter(): boolean {
-    return this.encounterIndex < ENEMY_ORDER.length - 1;
+  private beginFromMainMenu(): void {
+    this.session.beginFromMainMenu();
+    this.refreshUi();
   }
 
-  private getNextEncounterLabel(): string | null {
-    if (!this.hasNextEncounter()) {
-      return null;
+  private restartFromDeathScreen(): void {
+    if (this.session.restartFromDeathScreen()) {
+      this.syncEncounterVisualState();
     }
+    this.refreshUi();
+  }
 
-    return createEnemyState(ENEMY_ORDER[this.encounterIndex + 1]).label;
+  private restartFromVictoryScreen(): void {
+    if (this.session.restartFromVictoryScreen()) {
+      this.syncEncounterVisualState();
+    }
+    this.refreshUi();
   }
 
   private startEncounter(enemyId: EnemyId): void {
-    this.encounterIndex = ENEMY_ORDER.indexOf(enemyId);
-    this.seedBase += 97;
-    this.mode = "combat";
-    this.state = createCombatState(this.seedBase, enemyId, undefined, this.ownedAccessories);
-    this.logs = [`Loaded encounter: ${this.state.enemy.label}.`];
-    this.displayCurrentIndex = this.state.cylinder.currentIndex;
-    this.rotationAnimationToken += 1;
-    this.pendingRotationSteps = null;
+    this.session.startEncounter(enemyId);
+    this.syncEncounterVisualState();
     this.refreshUi();
   }
 
   private performAction(action: PlayerAction): void {
-    if (this.mode !== "combat") {
-      return;
-    }
-
-    if (this.state.over) {
-      this.pushLog("Encounter is over. Press Enter to continue.");
-      this.refreshUi();
-      return;
-    }
-
-    const wasOver = this.state.over;
-    const result = stepCombat(this.state, action);
-    this.state = result.state;
-    result.events.forEach((event) => this.consumeEvent(event));
-
-    if (!wasOver && this.state.over) {
-      if (this.state.outcome === "victory") {
-        const reward = ENEMY_REWARDS[this.state.enemy.id];
-        this.money += reward;
-        this.pushLog(`Collected $${reward}.`);
-        if (this.hasNextEncounter()) {
-          this.openShop();
-        } else {
-          this.pushLog("Run clear. Press Enter to restart.");
-        }
-      } else {
-        this.pushLog("Defeat. Press Enter to restart from Rat Swarm.");
-      }
-    }
-
-    this.refreshUi();
-  }
-
-  private openShop(): void {
-    if (!this.hasNextEncounter()) {
-      this.mode = "combat";
-      this.refreshUi();
-      return;
-    }
-
-    const stock = createShopStock(this.shopSeed + this.encounterIndex * 97, this.ownedAccessories);
-    this.shopSeed = stock.seed;
-    this.shopStock = stock.stock.map((accessoryId) => accessoryId);
-    this.mode = "shop";
+    const events = this.session.performAction(action);
+    this.handleLogicEvents(events);
     this.refreshUi();
   }
 
   private leaveShop(): void {
-    if (this.mode !== "shop") {
-      return;
+    if (this.session.leaveShop()) {
+      this.syncEncounterVisualState();
     }
-
-    const nextEnemyId = ENEMY_ORDER[this.encounterIndex + 1];
-    if (nextEnemyId) {
-      this.startEncounter(nextEnemyId);
-    } else {
-      this.refreshUi();
-    }
-  }
-
-  private buyShopAccessory(index: number): void {
-    if (this.mode !== "shop") {
-      return;
-    }
-
-    const accessoryId = this.shopStock[index];
-    if (!accessoryId) {
-      return;
-    }
-
-    const accessory = ACCESSORY_DEFS[accessoryId];
-    if (this.ownedAccessories.includes(accessoryId)) {
-      this.pushLog(`${accessory.label} is already installed.`);
-      this.refreshUi();
-      return;
-    }
-    if (this.money < accessory.price) {
-      this.pushLog(`Need $${accessory.price} for ${accessory.label}.`);
-      this.refreshUi();
-      return;
-    }
-
-    this.money -= accessory.price;
-    this.ownedAccessories.push(accessoryId);
-    this.shopStock[index] = null;
-    this.pushLog(`Bought ${accessory.label}.`);
     this.refreshUi();
   }
 
-  private consumeEvent(event: CombatEvent): void {
+  private buyShopAccessory(index: number): void {
+    this.session.buyShopAccessory(index);
+    this.refreshUi();
+  }
+
+  private handleLogicEvents(events: readonly CombatEvent[]): void {
+    events.forEach((event) => this.applyVisualEvent(event));
+  }
+
+  private applyVisualEvent(event: CombatEvent): void {
     switch (event.type) {
-      case "log":
-        this.pushLog(event.text);
-        break;
       case "cylinder_changed":
         if (event.action === "reload") {
           this.rotationAnimationToken += 1;
           this.pendingRotationSteps = null;
-          this.displayCurrentIndex = this.state.cylinder.currentIndex;
+          this.displayCurrentIndex = this.session.getState().cylinder.currentIndex;
         } else {
           this.pendingRotationSteps = event.rotations ?? 1;
         }
@@ -798,11 +842,10 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
-  private pushLog(text: string): void {
-    this.logs.push(text);
-    if (this.logs.length > 12) {
-      this.logs = this.logs.slice(-12);
-    }
+  private syncEncounterVisualState(): void {
+    this.displayCurrentIndex = this.session.getState().cylinder.currentIndex;
+    this.rotationAnimationToken += 1;
+    this.pendingRotationSteps = null;
   }
 
   private toggleFullscreen(): void {
@@ -826,7 +869,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private showBulletTooltip(index: number): void {
-    const round = this.state.cylinder.chambers[index];
+    const round = this.session.getState().cylinder.chambers[index];
     const chamber = this.chamberVisuals[index];
     const text = round
       ? [
@@ -924,15 +967,16 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private getEnemySummary(): string {
+    const state = this.session.getState();
     const lines = [
-      this.state.enemy.label.toUpperCase(),
-      `HP ${this.state.enemy.hp}/${this.state.enemy.maxHp}`,
+      state.enemy.label.toUpperCase(),
+      `HP ${state.enemy.hp}/${state.enemy.maxHp}`,
     ];
     return lines.join("\n");
   }
 
   private getAccessorySummary(): string {
-    if (this.ownedAccessories.length === 0) {
+    if (this.session.getOwnedAccessories().length === 0) {
       return "None";
     }
 
@@ -945,7 +989,7 @@ export class CombatScene extends Phaser.Scene {
 
     this.accessoryHeaderText.setText("Accessories");
 
-    if (this.ownedAccessories.length === 0) {
+    if (this.session.getOwnedAccessories().length === 0) {
       const emptyText = this.add.text(444, 468, "None", {
         fontFamily: "Trebuchet MS, sans-serif",
         fontSize: "16px",
@@ -962,7 +1006,7 @@ export class CombatScene extends Phaser.Scene {
     let cursorX = startX;
     let cursorY = startY;
 
-    this.ownedAccessories.forEach((accessoryId) => {
+    this.session.getOwnedAccessories().forEach((accessoryId) => {
       const accessory = ACCESSORY_DEFS[accessoryId];
       const label = this.add.text(cursorX, cursorY, accessory.label, {
         fontFamily: "Trebuchet MS, sans-serif",
@@ -989,7 +1033,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private refreshShopUi(): void {
-    const shopVisible = this.mode === "shop";
+    const shopVisible = this.session.getMode() === "shop";
     this.shopOverlay.setVisible(shopVisible);
     this.shopPanel.setVisible(shopVisible);
     this.shopTitleText.setVisible(shopVisible);
@@ -1008,11 +1052,11 @@ export class CombatScene extends Phaser.Scene {
     }
 
     this.shopTitleText.setText("SHOP");
-    this.shopMoneyText.setText(`Credits: $${this.money}`);
+    this.shopMoneyText.setText(`Credits: $${this.session.getMoney()}`);
     this.shopHintText.setText("1 / 2 / 3 buy\nEnter or click Continue for the next combat");
 
     this.shopOptionVisuals.forEach((option, index) => {
-      const accessoryId = this.shopStock[index] ?? null;
+      const accessoryId = this.session.getShopStock()[index] ?? null;
       option.box.setVisible(true);
       option.title.setVisible(true);
       option.body.setVisible(true);
@@ -1028,7 +1072,7 @@ export class CombatScene extends Phaser.Scene {
       }
 
       const accessory = ACCESSORY_DEFS[accessoryId];
-      const affordable = this.money >= accessory.price;
+      const affordable = this.session.getMoney() >= accessory.price;
       option.box.setFillStyle(affordable ? 0x223246 : 0x2a1d1d, 0.98);
       option.box.setStrokeStyle(2, affordable ? 0xf1c66b : 0xa26d6d, 0.92);
       option.title.setText(`${index + 1}. ${accessory.label}\n$${accessory.price}`);
@@ -1054,7 +1098,8 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
 
-    this.logBodyText.setText(this.logs.length > 0 ? this.logs.slice(-16).join("\n") : "No events yet.");
+    const logs = this.session.getLogs();
+    this.logBodyText.setText(logs.length > 0 ? logs.slice(-16).join("\n") : "No events yet.");
   }
 
   private animateCylinderRotation(rotations: number): void {
@@ -1071,7 +1116,7 @@ export class CombatScene extends Phaser.Scene {
       remaining -= 1;
       this.displayCurrentIndex = findNextLoadedChamberIndex(
         {
-          ...this.state.cylinder,
+          ...this.session.getState().cylinder,
           currentIndex: this.displayCurrentIndex,
         },
         this.displayCurrentIndex,
@@ -1084,7 +1129,7 @@ export class CombatScene extends Phaser.Scene {
     };
 
     if (steps <= 0) {
-      this.displayCurrentIndex = this.state.cylinder.currentIndex;
+      this.displayCurrentIndex = this.session.getState().cylinder.currentIndex;
       this.renderChambers(false);
       return;
     }
@@ -1100,7 +1145,7 @@ export class CombatScene extends Phaser.Scene {
 
   private layoutChambers(animated: boolean, currentIndex: number): void {
     const order = getCylinderOrder({
-      ...this.state.cylinder,
+      ...this.session.getState().cylinder,
       currentIndex,
     });
 
@@ -1134,8 +1179,9 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private renderChambers(animated: boolean): void {
+    const state = this.session.getState();
     const order = getCylinderOrder({
-      ...this.state.cylinder,
+      ...state.cylinder,
       currentIndex: this.displayCurrentIndex,
     });
     const currentChamber = order[0];
@@ -1143,7 +1189,7 @@ export class CombatScene extends Phaser.Scene {
     const secondNextChamber = order[2];
 
     this.chamberVisuals.forEach((visual, index) => {
-      const round = this.state.cylinder.chambers[index];
+      const round = state.cylinder.chambers[index];
       const current = index === currentChamber;
       const next = index === nextChamber;
       const secondNext = index === secondNextChamber;
@@ -1198,15 +1244,20 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private refreshUi(): void {
-    const intent = getEnemyIntent(this.state.enemy);
-    const nextLabel = this.getNextEncounterLabel() ?? "next combat";
-    const shopVisible = this.mode === "shop";
+    const state = this.session.getState();
+    const mode = this.session.getMode();
+    const intent = getEnemyIntent(state.enemy);
+    const nextLabel = this.session.getNextEncounterLabel() ?? "next combat";
+    const shopVisible = mode === "shop";
+    const mainMenuVisible = mode === "main_menu";
+    const deathVisible = mode === "death";
+    const victoryVisible = mode === "victory";
 
-    this.moneyText.setText(`Credits $${this.money}`);
-    this.uiSprites.enemy.setTexture(ENEMY_TEXTURE_KEYS[this.state.enemy.id]);
+    this.moneyText.setText(`Credits $${this.session.getMoney()}`);
+    this.uiSprites.enemy.setTexture(ENEMY_TEXTURE_KEYS[state.enemy.id]);
 
     this.playerText.setText(
-      `PLAYER\nHP ${this.state.player.hp}/${this.state.player.maxHp}\nGuard ${this.state.player.guard}`,
+      `PLAYER\nHP ${state.player.hp}/${state.player.maxHp}\nGuard ${state.player.guard}\nCombo +${state.combo}\nHeat ${state.heat}/6`,
     );
 
     this.enemyText.setText(this.getEnemySummary());
@@ -1216,9 +1267,9 @@ export class CombatScene extends Phaser.Scene {
     );
 
     this.outcomeText.setText(
-      this.state.over
-        ? this.state.outcome === "victory"
-          ? this.hasNextEncounter()
+      state.over
+        ? state.outcome === "victory"
+          ? this.session.hasNextEncounter()
             ? "Encounter Clear."
             : "Run Clear."
           : "Defeat."
@@ -1226,7 +1277,7 @@ export class CombatScene extends Phaser.Scene {
     );
 
     if (!this.hasPositionedChambers) {
-      this.displayCurrentIndex = this.state.cylinder.currentIndex;
+      this.displayCurrentIndex = state.cylinder.currentIndex;
     }
     this.renderChambers(!this.hasPositionedChambers);
 
@@ -1240,26 +1291,46 @@ export class CombatScene extends Phaser.Scene {
     this.deckText.setText(`Hover any chamber for details.`);
     const footerLines = shopVisible
       ? [
-          `Spend credits, then press Enter for ${nextLabel}.`,
+          `Spend credits, then continue for ${nextLabel}.`,
           "Accessories persist for the rest of the run.",
         ]
-      : this.state.over
-        ? this.state.outcome === "victory"
-          ? this.hasNextEncounter()
-            ? [`Encounter clear. Press Enter for shop, then ${nextLabel}.`, "Match ammo to enemy states."]
-            : ["Run clear. Press Enter to restart.", "Accessories reset with a new run."]
-          : ["Defeat. Press Enter to restart from Rat Swarm.", "Accessories reset with a new run."]
+      : state.over
+        ? state.outcome === "victory"
+          ? this.session.hasNextEncounter()
+            ? [`Encounter clear. Continue to shop, then ${nextLabel}.`, "Match ammo to enemy states."]
+            : ["Run clear.", "Restart from the victory screen to begin a new run."]
+          : ["Defeat.", "Accessories reset with a new run."]
         : [
             "Enemy telegraphs. You choose an action. Then the enemy acts.",
-            "Match ammo to enemy states.",
+            "Offensive shots build combo. 3+ consecutive shots also build heat.",
           ];
     this.footerText.setText(footerLines.join("\n"));
 
     this.actionButtons.forEach((button) => {
-      const disabled = this.state.over || shopVisible;
+      const disabled = state.over || shopVisible || mainMenuVisible || deathVisible || victoryVisible;
       button.box.setAlpha(disabled ? 0.3 : 0.95);
       button.label.setAlpha(disabled ? 0.45 : 1);
     });
+
+    this.mainMenuOverlay.setVisible(mainMenuVisible);
+    this.mainMenuPanel.setVisible(mainMenuVisible);
+    this.mainMenuTitleText.setVisible(mainMenuVisible);
+    this.mainMenuStartButton.box.setVisible(mainMenuVisible);
+    this.mainMenuStartButton.label.setVisible(mainMenuVisible);
+
+    this.deathOverlay.setVisible(deathVisible);
+    this.deathPanel.setVisible(deathVisible);
+    this.deathTitleText.setVisible(deathVisible);
+    this.deathBodyText.setVisible(deathVisible);
+    this.deathRestartButton.box.setVisible(deathVisible);
+    this.deathRestartButton.label.setVisible(deathVisible);
+
+    this.victoryOverlay.setVisible(victoryVisible);
+    this.victoryPanel.setVisible(victoryVisible);
+    this.victoryTitleText.setVisible(victoryVisible);
+    this.victoryBodyText.setVisible(victoryVisible);
+    this.victoryRestartButton.box.setVisible(victoryVisible);
+    this.victoryRestartButton.label.setVisible(victoryVisible);
 
     this.refreshShopUi();
     this.refreshLogOverlay();

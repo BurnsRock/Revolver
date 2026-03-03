@@ -17,6 +17,8 @@ Each turn the enemy telegraphs its next move. You choose exactly one revolver ac
 - `ROTATE`: advance to the next chamber.
 - `SPIN`: rotate the cylinder a random 19 to 24 chambers.
 - `RELOAD`: dump live rounds, draw 6 fresh bullets, and refill the cylinder.
+- Consecutive offensive shots build combo, increasing the next offensive shot by up to `+3`. Blank shots, dry fires, and non-fire actions break the combo.
+- Firing 3 or more live rounds back-to-back builds heat: shot 3 burns for 1, shot 4 for 2, shot 5 for 3, and shot 6 overheats the gun hard enough to skip your next turn.
 - After each non-final victory you enter a shop, spend credits on accessories, then continue the run.
 
 The pure combat rules live under `src/core/`. Phaser in `src/game/CombatScene.ts` only renders state, logs, and input.
@@ -29,7 +31,8 @@ The pure combat rules live under `src/core/`. Phaser in `src/game/CombatScene.ts
 - `L`: Reload
 - `1` `2` `3` `4`: Load Rat Swarm / Riot Droid / Sniper / Drone
 - `1` `2` `3` in shop: Buy an accessory
-- `Enter`: Continue after a win/shop, or restart the run after a loss/final clear
+- `Enter`: Start from menu, continue after a win/shop, or restart the run after a loss/final clear
+- `START` / `CONTINUE` / `RESTART` buttons: touch-friendly menu, shop, death, and final-victory flow
 - `X`: Toggle fullscreen
 - `Esc`: Exit fullscreen
 

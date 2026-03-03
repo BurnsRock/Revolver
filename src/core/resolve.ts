@@ -28,6 +28,8 @@ import type {
 
 const PLAYER_MAX_HP = 35;
 const BLANK_GUARD = 6;
+const MAX_COMBO_BONUS = 3;
+const OVERHEAT_THRESHOLD = 6;
 
 const emitLog = (events: CombatEvent[], text: string): void => {
   events.push({ type: "log", text });
@@ -49,6 +51,8 @@ const cloneEnemy = (enemy: EnemyState): EnemyState => {
 const cloneState = (state: CombatState): CombatState => ({
   seed: state.seed,
   turn: state.turn,
+  combo: state.combo,
+  heat: state.heat,
   player: { ...state.player },
   enemy: cloneEnemy(state.enemy),
   deck: {
@@ -146,6 +150,57 @@ const grantGuard = (
   emitLog(events, `${source} grants ${amount} guard.`);
 };
 
+const damagePlayer = (
+  state: CombatState,
+  amount: number,
+  source: string,
+  events: CombatEvent[],
+  ignoreGuard: boolean = false,
+): void => {
+  const blocked = ignoreGuard ? 0 : Math.min(state.player.guard, amount);
+  const applied = Math.max(0, amount - blocked);
+  state.player.guard -= blocked;
+  state.player.hp = Math.max(0, state.player.hp - applied);
+  events.push({
+    type: "player_damaged",
+    amount: applied,
+    blocked,
+    remainingHp: state.player.hp,
+    source,
+  });
+  if (blocked > 0) {
+    emitLog(events, `Guard absorbs ${blocked} from ${source}.`);
+  }
+  emitLog(events, `${source} hits for ${applied}.`);
+};
+
+const resetHeat = (state: CombatState): void => {
+  state.heat = 0;
+};
+
+const resetCombo = (state: CombatState): void => {
+  state.combo = 0;
+};
+
+const applyShotHeat = (state: CombatState, events: CombatEvent[]): boolean => {
+  state.heat += 1;
+
+  if (state.heat >= OVERHEAT_THRESHOLD) {
+    emitLog(events, "The revolver is too hot to hold. You lose the next turn while it cools.");
+    return true;
+  }
+
+  if (state.heat >= 3) {
+    damagePlayer(state, state.heat - 2, "Revolver Heat", events, true);
+  }
+
+  return false;
+};
+
+const buildCombo = (state: CombatState): void => {
+  state.combo = Math.min(MAX_COMBO_BONUS, state.combo + 1);
+};
+
 const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
   grantGuard(state, BLANK_GUARD, events, "Blank");
   if (hasAccessory(state, "shock_padding")) {
@@ -153,129 +208,131 @@ const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
   }
 };
 
-const applyBirdshot = (state: CombatState, events: CombatEvent[]): void => {
+const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const extra = hasAccessory(state, "honed_choke") ? 1 : 0;
   if (state.enemy.id === "rat_swarm") {
-    removeSwarmStacks(state.enemy, 3 + extra, events, "Birdshot");
+    removeSwarmStacks(state.enemy, 3 + extra + comboBonus, events, "Birdshot");
     return;
   }
-  damageEnemy(state, 2 + extra, "Birdshot", events);
+  damageEnemy(state, 2 + extra + comboBonus, "Birdshot", events);
 };
 
-const applyBuckshot = (state: CombatState, events: CombatEvent[]): void => {
+const applyBuckshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const tags = getEnemyTags(state.enemy);
   const bonusDamage = hasAccessory(state, "rifled_tools") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
-    removeSwarmStacks(state.enemy, 2, events, "Buckshot");
+    removeSwarmStacks(state.enemy, 2 + comboBonus, events, "Buckshot");
     return;
   }
 
   if (state.enemy.id === "riot_droid" && tags.includes("charging")) {
-    damageEnemy(state, 6 + bonusDamage, "Buckshot", events);
+    damageEnemy(state, 6 + bonusDamage + comboBonus, "Buckshot", events);
     (state.enemy as RiotDroidState).cycleIndex = 3;
     emitLog(events, "Buckshot staggers the droid into cooldown.");
     return;
   }
 
   if (state.enemy.id === "sniper") {
-    damageEnemy(state, 5 + bonusDamage, "Buckshot", events);
+    damageEnemy(state, 5 + bonusDamage + comboBonus, "Buckshot", events);
     (state.enemy as SniperState).interrupted = true;
     emitLog(events, "Buckshot blows the sniper off the sightline.");
     return;
   }
 
   if (tags.includes("exposed")) {
-    damageEnemy(state, 9 + bonusDamage, "Buckshot", events);
+    damageEnemy(state, 9 + bonusDamage + comboBonus, "Buckshot", events);
     emitLog(events, "Buckshot cashes in on the exposed window.");
     return;
   }
 
-  damageEnemy(state, 4 + bonusDamage, "Buckshot", events);
+  damageEnemy(state, 4 + bonusDamage + comboBonus, "Buckshot", events);
 };
 
-const applySlug = (state: CombatState, events: CombatEvent[]): void => {
+const applySlug = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const tags = getEnemyTags(state.enemy);
   const bonusDamage = hasAccessory(state, "rifled_tools") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
-    removeSwarmStacks(state.enemy, 1, events, "Slug");
+    removeSwarmStacks(state.enemy, 1 + comboBonus, events, "Slug");
     return;
   }
 
   if (tags.includes("evasive")) {
-    damageEnemy(state, 1 + bonusDamage, "Slug", events);
+    damageEnemy(state, 1 + bonusDamage + comboBonus, "Slug", events);
     emitLog(events, "Slug barely clips the evasive target.");
     return;
   }
 
   if (tags.includes("hover") || tags.includes("steady")) {
-    damageEnemy(state, 10 + bonusDamage, "Slug", events);
+    damageEnemy(state, 10 + bonusDamage + comboBonus, "Slug", events);
     emitLog(events, "Slug lands squarely on the stable target.");
     return;
   }
 
-  damageEnemy(state, 6 + bonusDamage, "Slug", events);
+  damageEnemy(state, 6 + bonusDamage + comboBonus, "Slug", events);
 };
 
-const applyArmorPiercing = (state: CombatState, events: CombatEvent[]): void => {
+const applyArmorPiercing = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const armoredBonus = hasAccessory(state, "tungsten_core") && hasArmor(state.enemy) ? 2 : 0;
-  const damage = hasArmor(state.enemy) ? 6 + armoredBonus : 3;
+  const damage = hasArmor(state.enemy) ? 6 + armoredBonus + comboBonus : 3 + comboBonus;
   damageEnemy(state, damage, "Armor Piercing", events, true);
 };
 
-const applyFlechette = (state: CombatState, events: CombatEvent[]): void => {
+const applyFlechette = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const extraStatus = hasAccessory(state, "shredder_tools") ? 1 : 0;
   if (state.enemy.id === "rat_swarm") {
-    state.enemy.infestation += 2 + extraStatus;
+    removeSwarmStacks(state.enemy, 1 + comboBonus, events, "Flechette");
+    state.enemy.infestation += 3 + extraStatus;
     events.push({
       type: "status_applied",
       target: "enemy",
       status: "infestation",
-      amount: 2 + extraStatus,
+      amount: 3 + extraStatus,
       total: state.enemy.infestation,
     });
-    emitLog(events, `Flechette seeds the swarm with ${2 + extraStatus} infestation.`);
+    emitLog(events, `Flechette seeds the swarm with ${3 + extraStatus} infestation.`);
     return;
   }
 
   if (state.enemy.id === "riot_droid") {
-    state.enemy.shred += 2 + extraStatus;
+    state.enemy.shred += 2 + extraStatus + comboBonus;
     events.push({
       type: "status_applied",
       target: "enemy",
       status: "shred",
-      amount: 2 + extraStatus,
+      amount: 2 + extraStatus + comboBonus,
       total: state.enemy.shred,
     });
-    damageEnemy(state, 1, "Flechette", events, true);
-    emitLog(events, `Flechette strips ${2 + extraStatus} armor layers from future hits.`);
+    damageEnemy(state, 1 + comboBonus, "Flechette", events, true);
+    emitLog(events, `Flechette strips ${2 + extraStatus + comboBonus} armor layers from future hits.`);
     return;
   }
 
-  damageEnemy(state, 2, "Flechette", events);
+  damageEnemy(state, 2 + comboBonus, "Flechette", events);
 };
 
 const resolveBullet = (
   state: CombatState,
   bullet: BulletType,
+  comboBonus: number,
   events: CombatEvent[],
 ): void => {
   switch (bullet) {
     case "birdshot":
-      applyBirdshot(state, events);
+      applyBirdshot(state, comboBonus, events);
       break;
     case "buckshot":
-      applyBuckshot(state, events);
+      applyBuckshot(state, comboBonus, events);
       break;
     case "slug":
-      applySlug(state, events);
+      applySlug(state, comboBonus, events);
       break;
     case "armor_piercing":
-      applyArmorPiercing(state, events);
+      applyArmorPiercing(state, comboBonus, events);
       break;
     case "flechette":
-      applyFlechette(state, events);
+      applyFlechette(state, comboBonus, events);
       break;
     case "blank":
       applyBlank(state, events);
@@ -295,6 +352,8 @@ const finishEncounter = (
   events: CombatEvent[],
   outcome: "victory" | "defeat",
 ): CombatStepResult => {
+  resetCombo(state);
+  resetHeat(state);
   state.over = true;
   state.outcome = outcome;
   events.push({ type: "encounter_end", outcome });
@@ -303,6 +362,8 @@ const finishEncounter = (
 };
 
 const performReload = (state: CombatState, events: CombatEvent[]): void => {
+  resetCombo(state);
+  resetHeat(state);
   state.deck = discardBullets(state.deck, collectCylinderRounds(state.cylinder));
   const drawn = drawBullets(state.deck, state.cylinder.capacity, state.seed);
   state.deck = drawn.deck;
@@ -333,6 +394,8 @@ export const createCombatState = (
   const baseState: CombatState = {
     seed: deckResult.seed,
     turn: 1,
+    combo: 0,
+    heat: 0,
     player: {
       hp: PLAYER_MAX_HP,
       maxHp: PLAYER_MAX_HP,
@@ -351,6 +414,31 @@ export const createCombatState = (
   return baseState;
 };
 
+const resolveEnemyTurn = (
+  state: CombatState,
+  events: CombatEvent[],
+): "victory" | "defeat" | null => {
+  const enemyDef = getEnemyDef(state.enemy);
+  enemyDef.onTurnStart?.(state, state.enemy as never, (event) => events.push(event));
+
+  if (isEnemyDefeated(state.enemy)) {
+    return "victory";
+  }
+
+  enemyDef.act(state, state.enemy as never, (event) => events.push(event));
+  decayEnemyStatuses(state.enemy, events);
+
+  if (isEnemyDefeated(state.enemy)) {
+    return "victory";
+  }
+
+  if (state.player.hp <= 0) {
+    return "defeat";
+  }
+
+  return null;
+};
+
 export const stepCombat = (
   state: CombatState,
   action: PlayerAction,
@@ -362,6 +450,7 @@ export const stepCombat = (
   const nextState = cloneState(state);
   const events: CombatEvent[] = [];
   events.push({ type: "player_action", action });
+  let lostTurnToHeat = false;
 
   switch (action) {
     case "fire": {
@@ -377,10 +466,24 @@ export const stepCombat = (
         rotations: 1,
       });
       if (fired.bullet === null) {
+        resetCombo(nextState);
+        resetHeat(nextState);
         emitLog(events, "Dry fire. The chamber clicks empty.");
       } else {
         emitLog(events, `Fire ${BULLET_DEFS[fired.bullet].label}.`);
-        resolveBullet(nextState, fired.bullet, events);
+        const offensiveBullet = fired.bullet !== "blank";
+        if (!offensiveBullet) {
+          resetCombo(nextState);
+        }
+        const comboBonus = offensiveBullet ? nextState.combo : 0;
+        if (comboBonus > 0) {
+          emitLog(events, `Combo +${comboBonus} empowers the shot.`);
+        }
+        resolveBullet(nextState, fired.bullet, comboBonus, events);
+        if (offensiveBullet) {
+          buildCombo(nextState);
+        }
+        lostTurnToHeat = applyShotHeat(nextState, events);
       }
       emitLog(
         events,
@@ -389,6 +492,8 @@ export const stepCombat = (
       break;
     }
     case "rotate":
+      resetCombo(nextState);
+      resetHeat(nextState);
       nextState.cylinder = rotateCylinder(nextState.cylinder);
       events.push({
         type: "cylinder_changed",
@@ -405,6 +510,8 @@ export const stepCombat = (
       }
       break;
     case "spin": {
+      resetCombo(nextState);
+      resetHeat(nextState);
       const spun = spinCylinder(nextState.cylinder, nextState.seed);
       nextState.seed = spun.seed;
       nextState.cylinder = spun.cylinder;
@@ -429,25 +536,24 @@ export const stepCombat = (
     return finishEncounter(nextState, events, "victory");
   }
 
-  const enemyDef = getEnemyDef(nextState.enemy);
-  enemyDef.onTurnStart?.(nextState, nextState.enemy as never, (event) => events.push(event));
-
-  if (isEnemyDefeated(nextState.enemy)) {
-    return finishEncounter(nextState, events, "victory");
+  let turnAdvance = 1;
+  const enemyTurnOutcome = resolveEnemyTurn(nextState, events);
+  if (enemyTurnOutcome) {
+    return finishEncounter(nextState, events, enemyTurnOutcome);
   }
 
-  enemyDef.act(nextState, nextState.enemy as never, (event) => events.push(event));
-  decayEnemyStatuses(nextState.enemy, events);
-
-  if (isEnemyDefeated(nextState.enemy)) {
-    return finishEncounter(nextState, events, "victory");
+  if (lostTurnToHeat) {
+    resetCombo(nextState);
+    resetHeat(nextState);
+    turnAdvance += 1;
+    emitLog(events, "You lose a turn while the revolver cools.");
+    const skippedTurnOutcome = resolveEnemyTurn(nextState, events);
+    if (skippedTurnOutcome) {
+      return finishEncounter(nextState, events, skippedTurnOutcome);
+    }
   }
 
-  if (nextState.player.hp <= 0) {
-    return finishEncounter(nextState, events, "defeat");
-  }
-
-  nextState.turn += 1;
+  nextState.turn += turnAdvance;
   events.push({ type: "enemy_intent", intent: getEnemyIntent(nextState.enemy).label });
   return { state: nextState, events };
 };
@@ -473,6 +579,8 @@ export const describeEnemyMetrics = (enemy: EnemyState): string[] => {
 
 export const getCombatSnapshot = (state: CombatState) => ({
   turn: state.turn,
+  combo: state.combo,
+  heat: state.heat,
   outcome: state.outcome,
   player: {
     hp: state.player.hp,

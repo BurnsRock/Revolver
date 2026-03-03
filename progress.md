@@ -161,3 +161,57 @@ TODOs / suggestions:
   - `npm run build` passes after the chamber art update.
   - `./run_playwright.ps1` passes with no browser errors captured.
   - Reviewed `output/web-game/shot-0.png` and confirmed loaded chambers show the correct ammo art while the credits/log/accessories UI remains text-only.
+
+- Added a dedicated final-victory overlay in `src/game/CombatScene.ts`.
+  - Final run clear now switches to `mode: "victory"` instead of leaving restart on an Enter-only footer hint.
+  - The overlay mirrors the death screen pattern with a visible `RESTART` button and `Enter` fallback.
+  - Footer/log copy now points the player to the victory screen instead of “Press Enter to restart.”
+- Updated browser automation payloads.
+  - `test-actions.json` now starts from the main menu with `Enter` before exercising the first shop purchase flow.
+  - Added `test-actions-victory.json` and `test-actions-victory-restart.json` for full-run final-clear coverage.
+- Validation:
+  - `npm test` passes.
+  - `npm run build` passes.
+  - Skill Playwright client passes with the updated `test-actions.json`.
+  - Direct Playwright validation clicked the Phaser canvas buttons with scale-corrected coordinates and produced:
+    - `output/web-game/direct-victory.png` with `output/web-game/direct-victory-state.json` showing `mode: "victory"` at encounter 4/4.
+    - `output/web-game/direct-victory-restart.png` with `output/web-game/direct-victory-restart-state.json` showing the `RESTART` button returns to encounter 1 in `mode: "combat"`.
+
+- Added a revolver heat mechanic in the pure combat resolver.
+  - `CombatState` now tracks `heat`, shown in both `render_game_to_text` and the player HUD.
+  - Consecutive real shots add heat: 3rd shot deals 1 self-damage, 4th deals 2, 5th deals 3, and the 6th forces an immediate skipped turn while the enemy acts again.
+  - Dry fires, rotate, spin, reload, and encounter end all reset heat back to 0.
+- Updated deterministic tests in `src/core/resolve.test.ts`.
+  - Added coverage for escalating heat damage, the heat-6 skipped-turn branch, and heat reset on non-fire actions.
+- Added browser validation payload `test-actions-heat.json`.
+  - Reviewed `output/web-game/heat/shot-0.png` and `output/web-game/heat/state-0.json`; the HUD visibly shows `Heat 3/6` and the text snapshot reports `heat: 3` after three consecutive shots.
+- Validation:
+  - `npm test` passes with 12 tests.
+  - `npm run build` passes.
+  - Skill Playwright client passes with `test-actions-heat.json` and the updated `test-actions.json`.
+
+- Added a bullet combo mechanic in the pure combat resolver.
+  - `CombatState` now tracks `combo`, exposed in `render_game_to_text` and the player HUD as `Combo +N`.
+  - Consecutive offensive shots build combo up to `+3`; that bonus increases the next offensive bullet's damage or stack-clearing effect.
+  - Blank shots, dry fires, rotate, spin, reload, overheat turn-loss, and encounter end all reset combo back to 0.
+- Buffed flechette against stacked enemies.
+  - On `Rat Swarm`, flechette now clears 1 stack immediately and seeds 3 infestation before the turn-start tick, instead of only seeding 2 infestation.
+  - Combo now also scales flechette's direct stack clear, direct damage, and shred values.
+- Updated deterministic tests in `src/core/resolve.test.ts`.
+  - Added coverage for combo damage scaling, combo reset on blank, and the stronger flechette-vs-swarm interaction.
+- Added browser validation payload `test-actions-combo.json`.
+  - Reviewed `output/web-game/combo/shot-0.png` and `output/web-game/combo/state-0.json`; the HUD visibly shows `Combo +1`, and the state snapshot shows flechette leaving the swarm at 4 stacks with 2 infestation after one shot.
+- Validation:
+  - `npm test` passes with 15 tests.
+  - `npm run build` passes.
+  - Skill Playwright client passes with `test-actions-combo.json`, `test-actions-heat.json`, and the updated `test-actions.json`.
+
+- Refactor: moved non-Phaser combat/run/shop flow out of `src/game/CombatScene.ts` into `src/game/CombatSession.ts`.
+  - `CombatSession` now owns encounter progression, menu/shop/death/victory mode transitions, money/accessory/shop state, logs, and `render_game_to_text` payload assembly.
+  - `CombatScene` keeps Phaser object creation, input binding, tooltips, chamber animation, and HUD refresh/rendering.
+  - Scene-side event handling now only applies visual consequences from combat events (currently cylinder animation state).
+- Validation:
+  - `npm test` passes.
+  - `npm run build` passes.
+  - Skill Playwright client passes with `test-actions.json` and `test-actions-combo.json`.
+  - Reviewed `output/web-game/combo/shot-0.png` and confirmed HUD/rendering still match the post-refactor state snapshot.

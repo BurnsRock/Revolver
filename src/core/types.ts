@@ -113,6 +113,8 @@ export type EnemyState =
 export interface CombatState {
   seed: number;
   turn: number;
+  combo: number;
+  heat: number;
   player: PlayerState;
   enemy: EnemyState;
   deck: DeckState;
