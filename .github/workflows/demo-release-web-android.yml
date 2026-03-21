@@ -39,7 +39,7 @@ jobs:
 
       # ---- WEB BUILD ----
       - name: Build web (dist/)
-        run: npm run build
+        run: npm run build:web
 
       - name: Zip web build
         run: |
@@ -48,6 +48,9 @@ jobs:
           cd ..
 
       # ---- ANDROID BUILD ----
+      - name: Build Android web assets (dist/)
+        run: npm run build:android
+
       - name: Capacitor sync (Android)
         run: npx cap sync android
 
