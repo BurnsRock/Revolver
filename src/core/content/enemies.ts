@@ -541,14 +541,21 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
   },
 };
 
-export const ENEMY_ORDER: EnemyId[] = [
-  "rat_swarm",
-  "riot_droid",
-  "sniper",
-  "drone",
-  "tank",
-  "phantom_gunman",
-];
+const NON_BOSS_ENEMIES: EnemyId[] = ["rat_swarm", "riot_droid", "sniper", "drone"];
+const BOSS_ENEMIES: EnemyId[] = ["tank", "phantom_gunman"];
+
+export const ENEMY_ORDER: EnemyId[] = (() => {
+  const order = [...NON_BOSS_ENEMIES];
+  const boss = BOSS_ENEMIES[(Math.random() * BOSS_ENEMIES.length) | 0] ?? BOSS_ENEMIES[0];
+
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  order.push(boss);
+  return order;
+})();
 
 export const createEnemyState = (enemyId: EnemyId): EnemyState => {
   switch (enemyId) {
