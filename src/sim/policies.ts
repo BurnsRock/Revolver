@@ -36,6 +36,9 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
       if (state.enemy.id === "tank" && !tags.has("exposed")) {
         return 6; // Damage tracks
       }
+      if (state.enemy.id === "phantom_gunman" && tags.has("repositioning")) {
+        return 5; // Modest during repositioning
+      }
       if (tags.has("armored") || tags.has("shielded")) {
         return 0.5;
       }
@@ -64,6 +67,9 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
       if (state.enemy.id === "tank" && tags.has("fortified")) {
         return 9; // Best against fortified
       }
+      if (state.enemy.id === "phantom_gunman" && tags.has("exposed")) {
+        return 9; // Best during exposed
+      }
       if (tags.has("evasive")) {
         return 0.5;
       }
@@ -87,6 +93,9 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
     case "blank":
       if (state.enemy.id === "tank" && tags.has("firing")) {
         return 9; // Block cannon
+      }
+      if (state.enemy.id === "phantom_gunman" && tags.has("aiming")) {
+        return 8; // Interrupt aiming
       }
       if (incomingDamage >= 12) {
         return 7;

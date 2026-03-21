@@ -20,6 +20,7 @@ const UI_TEXTURE_KEYS = {
   sniper: "ui-sniper",
   drone: "ui-drone",
   tank: "ui-tank",
+  phantom_gunman: "ui-phantom-gunman",
   birdshot: "ui-birdshot",
   buckshot: "ui-buckshot",
   slug: "ui-slug",
@@ -75,6 +76,7 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   sniper: 14,
   drone: 18,
   tank: 25,
+  phantom_gunman: 22,
 };
 const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   rat_swarm: UI_TEXTURE_KEYS.rat_swarm,
@@ -82,6 +84,7 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   sniper: UI_TEXTURE_KEYS.sniper,
   drone: UI_TEXTURE_KEYS.drone,
   tank: UI_TEXTURE_KEYS.tank,
+  phantom_gunman: UI_TEXTURE_KEYS.phantom_gunman,
 };
 const cylinderImageUrl = new URL("../assets/images/initial/CYLINDER.PNG", import.meta.url).href;
 const birdshotImageUrl = new URL("../assets/images/initial/BIRD.PNG", import.meta.url).href;
@@ -95,6 +98,7 @@ const riotDroidImageUrl = new URL("../assets/images/initial/RIOT DROID.PNG", imp
 const slugImageUrl = new URL("../assets/images/initial/SLUG.PNG", import.meta.url).href;
 const sniperImageUrl = new URL("../assets/images/initial/SNIPER.PNG", import.meta.url).href;
 const tankImageUrl = new URL("../assets/images/initial/TANK.PNG", import.meta.url).href;
+const phantomGunmanImageUrl = new URL("../assets/images/initial/PHANTOM GUNMAN.PNG", import.meta.url).href;
 const armorPiercingImageUrl = new URL("../assets/images/initial/AP.PNG", import.meta.url).href;
 const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
   birdshot: UI_TEXTURE_KEYS.birdshot,
@@ -206,6 +210,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image(UI_TEXTURE_KEYS.sniper, sniperImageUrl);
     this.load.image(UI_TEXTURE_KEYS.drone, droneImageUrl);
     this.load.image(UI_TEXTURE_KEYS.tank, tankImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.phantom_gunman, phantomGunmanImageUrl);
     this.load.image(UI_TEXTURE_KEYS.birdshot, birdshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.buckshot, buckshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.slug, slugImageUrl);

@@ -11,6 +11,7 @@ import type {
   SniperState,
   DroneState,
   TankState,
+  PhantomGunmanState,
 } from "../types";
 
 const emitLog = (emit: EventSink, text: string): void => {
@@ -443,12 +444,110 @@ const tankDef: EnemyDef<TankState> = {
   },
 };
 
+const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
+  id: "phantom_gunman",
+  label: "Phantom Gunman",
+  description: "A fast duelist that takes cover and strikes from the shadows. Patience and timing are key.",
+  createState: () => ({
+    id: "phantom_gunman",
+    label: "Phantom Gunman",
+    hp: 40,
+    maxHp: 40,
+    armor: 0,
+    shred: 0,
+    cycleIndex: 0,
+  }),
+  getIntent: (enemy) => {
+    switch (enemy.cycleIndex % 5) {
+      case 0:
+        return {
+          id: "hidden",
+          label: "HIDDEN",
+          detail: "Behind cover, hard to hit.",
+          tags: ["hidden"],
+        };
+      case 1:
+        return {
+          id: "aiming",
+          label: "AIMING",
+          detail: "Taking careful aim.",
+          tags: ["aiming"],
+        };
+      case 2:
+        return {
+          id: "exposed",
+          label: "EXPOSED",
+          detail: "Peeking out, vulnerable!",
+          tags: ["exposed"],
+        };
+      case 3:
+        return {
+          id: "firing",
+          label: "FIRING",
+          detail: "Unleashing a deadly shot.",
+          tags: ["firing"],
+          previewDamage: 12,
+        };
+      default:
+        return {
+          id: "repositioning",
+          label: "REPOSITIONING",
+          detail: "Moving to new cover.",
+          tags: ["repositioning"],
+        };
+    }
+  },
+  getTags: (enemy) => {
+    const tags: EnemyTag[] = [];
+    switch (enemy.cycleIndex % 5) {
+      case 0:
+        tags.push("hidden");
+        break;
+      case 1:
+        tags.push("aiming");
+        break;
+      case 2:
+        tags.push("exposed");
+        break;
+      case 3:
+        tags.push("firing");
+        break;
+      case 4:
+        tags.push("repositioning");
+        break;
+    }
+    return tags;
+  },
+  act: (state, enemy, emit) => {
+    switch (enemy.cycleIndex % 5) {
+      case 0:
+        emitLog(emit, "Phantom slips into cover.");
+        break;
+      case 1:
+        emitLog(emit, "Phantom takes aim.");
+        break;
+      case 2:
+        emitLog(emit, "Phantom is exposed!");
+        break;
+      case 3:
+        damagePlayer(state, 12, "Phantom Shot", emit);
+        break;
+      default:
+        emitLog(emit, "Phantom repositions.");
+        break;
+    }
+
+    enemy.cycleIndex = (enemy.cycleIndex + 1) % 5;
+  },
+};
+
 export const ENEMY_ORDER: EnemyId[] = [
   "rat_swarm",
   "riot_droid",
   "sniper",
   "drone",
   "tank",
+  "phantom_gunman",
 ];
 
 export const createEnemyState = (enemyId: EnemyId): EnemyState => {
@@ -463,6 +562,8 @@ export const createEnemyState = (enemyId: EnemyId): EnemyState => {
       return droneDef.createState();
     case "tank":
       return tankDef.createState();
+    case "phantom_gunman":
+      return phantomGunmanDef.createState();
   }
 };
 
@@ -478,6 +579,8 @@ export const getEnemyDef = <TEnemy extends EnemyState>(enemy: TEnemy): EnemyDef<
       return droneDef as unknown as EnemyDef<TEnemy>;
     case "tank":
       return tankDef as unknown as EnemyDef<TEnemy>;
+    case "phantom_gunman":
+      return phantomGunmanDef as unknown as EnemyDef<TEnemy>;
   }
 };
 

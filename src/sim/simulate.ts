@@ -14,7 +14,7 @@ import { SIMULATION_POLICIES, type SimulationPolicy } from "./policies";
 const DEFAULT_RUNS = 5000;
 const DEFAULT_BASE_SEED = 1337;
 const MAX_TURNS_PER_FIGHT = 200;
-const VALID_ENEMIES: readonly EnemyId[] = ["rat_swarm", "riot_droid", "sniper", "drone", "tank"];
+const VALID_ENEMIES: readonly EnemyId[] = ["rat_swarm", "riot_droid", "sniper", "drone", "tank", "phantom_gunman"];
 const PROCESS_ARGV =
   (globalThis as typeof globalThis & { process?: { argv?: string[] } }).process?.argv ?? [];
 

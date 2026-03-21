@@ -25,6 +25,7 @@ import type {
   RiotDroidState,
   SniperState,
   TankState,
+  PhantomGunmanState,
 } from "./types";
 
 const PLAYER_MAX_HP = 35;
@@ -47,6 +48,8 @@ const cloneEnemy = (enemy: EnemyState): EnemyState => {
     case "drone":
       return { ...enemy };
     case "tank":
+      return { ...enemy };
+    case "phantom_gunman":
       return { ...enemy };
   }
 };
@@ -216,6 +219,15 @@ const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
     state.heat -= heatReduced;
     emitLog(events, `Blank vents heat from the revolver. (-${heatReduced} heat)`);
   }
+
+  // For phantom_gunman, blank interrupts aiming
+  if (state.enemy.id === "phantom_gunman") {
+    const gunman = state.enemy as PhantomGunmanState;
+    if (gunman.cycleIndex % 5 === 1) { // Aiming
+      gunman.cycleIndex = 2; // Force to exposed
+      emitLog(events, "Blank interrupts the shot! Phantom is forced into exposure.");
+    }
+  }
 };
 
 const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
@@ -290,6 +302,21 @@ const applySlug = (state: CombatState, comboBonus: number, events: CombatEvent[]
       return;
     }
     damageEnemy(state, 4 + bonusDamage + comboBonus, "Slug", events);
+    return;
+  }
+
+  if (state.enemy.id === "phantom_gunman") {
+    let damage = 6 + bonusDamage + comboBonus;
+    if (tags.includes("exposed")) {
+      damageEnemy(state, damage, "Slug", events);
+      emitLog(events, "Slug catches Phantom in the open!");
+    } else if (tags.includes("hidden")) {
+      damageEnemy(state, Math.floor(damage * 0.2), "Slug", events); // 20% damage
+      emitLog(events, "Slug barely grazes through cover.");
+    } else {
+      damageEnemy(state, Math.floor(damage * 0.5), "Slug", events); // 50% damage
+      emitLog(events, "Slug hits partial cover.");
+    }
     return;
   }
 
