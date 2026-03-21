@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://oh5ybox8x88w"
+path="res://.godot/imported/Droid Glitch.wav-b582ef3ff1562e0e9ff6446001519111.sample"
+
+[deps]
+
+source_file="res://Revolver/src/assets/sounds/Droid Glitch.wav"
+dest_files=["res://.godot/imported/Droid Glitch.wav-b582ef3ff1562e0e9ff6446001519111.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2
