@@ -9,12 +9,12 @@
 
 ## 🧪 Ideas (Unsorted)
 - Silver bullet gauge fills on combo
-- Blank reduces heat ?
+- Blank reduces heat ???
 - Enemy that jams cylinder
 - Boss that spins your revolver
 - Cold bullets ??? beer, that can be drunk to reduce heat or its a relic
 - Drone enemies
-- 
+- Enemy type matchups - robot, animal, supernatural
 
 ## Relic Ideas
 - Scope
@@ -28,6 +28,9 @@
 - Safety Goggles - 
 - Cargo pants - randomly? auto reloads
 - Practice Target - always do max damage
+- Rifle mods - unlocks rifle ammo
+- Shotgun mods - unlocks shotgun ammo
+- Hunter's boots - unlocks bioweapons (pork, tranq darts and seed bullets)
 
 
 ## Bullet Ideas

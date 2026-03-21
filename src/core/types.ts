@@ -19,7 +19,7 @@ export type AccessoryId =
   | "tungsten_core"
   | "honed_choke";
 
-export type EnemyId = "rat_swarm" | "riot_droid" | "sniper" | "drone";
+export type EnemyId = "rat_swarm" | "riot_droid" | "sniper" | "drone" | "tank";
 
 export type EnemyTag =
   | "swarm"
@@ -30,7 +30,9 @@ export type EnemyTag =
   | "aiming"
   | "hover"
   | "steady"
-  | "evasive";
+  | "evasive"
+  | "fortified"
+  | "firing";
 
 export type CombatOutcome = "victory" | "defeat" | null;
 
@@ -104,11 +106,17 @@ export interface DroneState extends BaseEnemyState {
   id: "drone";
 }
 
+export interface TankState extends BaseEnemyState {
+  id: "tank";
+  tracksDamaged: number; // For birdshot destabilizing
+}
+
 export type EnemyState =
   | RatSwarmState
   | RiotDroidState
   | SniperState
-  | DroneState;
+  | DroneState
+  | TankState;
 
 export interface CombatState {
   seed: number;

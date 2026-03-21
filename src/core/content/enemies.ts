@@ -10,6 +10,7 @@ import type {
   RiotDroidState,
   SniperState,
   DroneState,
+  TankState,
 } from "../types";
 
 const emitLog = (emit: EventSink, text: string): void => {
@@ -346,11 +347,108 @@ const droneDef: EnemyDef<DroneState> = {
   },
 };
 
+const tankDef: EnemyDef<TankState> = {
+  id: "tank",
+  label: "A FUCKING TANK",
+  description: "A heavily armored tank-like boss with a devastating cannon. Forces strategic ammo use and timing.",
+  createState: () => ({
+    id: "tank",
+    label: "A FUCKING TANK",
+    hp: 25,
+    maxHp: 25,
+    armor: 0,
+    shred: 0,
+    cycleIndex: 0,
+    tracksDamaged: 0,
+  }),
+  getIntent: (enemy) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        return {
+          id: "fortify",
+          label: "FORTIFIED",
+          detail: "Heavy armor plating deployed.",
+          tags: ["armored", "fortified"],
+        };
+      case 1:
+        return {
+          id: "aim_cannon",
+          label: "AIMING",
+          detail: "Cannon locks onto target.",
+          tags: ["aiming"],
+        };
+      case 2:
+        return {
+          id: "fire_cannon",
+          label: "FIRING",
+          detail: "Cannon unleashes devastating blast.",
+          tags: ["firing"],
+          previewDamage: 10,
+        };
+      default:
+        return {
+          id: "exposed",
+          label: "EXPOSED",
+          detail: "Vents heat, armor retracted.",
+          tags: ["exposed"],
+        };
+    }
+  },
+  getTags: (enemy) => {
+    const tags: EnemyTag[] = [];
+    if (enemy.cycleIndex % 4 === 0) {
+      tags.push("armored", "fortified");
+    }
+    if (enemy.cycleIndex % 4 === 1) {
+      tags.push("aiming");
+    }
+    if (enemy.cycleIndex % 4 === 2) {
+      tags.push("firing");
+    }
+    if (enemy.cycleIndex % 4 === 3) {
+      tags.push("exposed");
+    }
+    return tags;
+  },
+  onTurnStart: (state, enemy, emit) => {
+    // Set armor based on state
+    if (enemy.cycleIndex % 4 === 0) {
+      enemy.armor = 8; // High armor when fortified
+      emitLog(emit, enemy.label + enemy.label + " braces behind reinforced armor.");
+    } else if (enemy.cycleIndex % 4 === 3) {
+      enemy.armor = 0; // No armor when exposed
+      emitLog(emit, enemy.label + enemy.label + " is exposed!");
+    } else {
+      enemy.armor = 4; // Moderate armor otherwise
+    }
+  },
+  act: (state, enemy, emit) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        emitLog(emit, enemy.label + enemy.label + " reinforces its armor plating.");
+        break;
+      case 1:
+        emitLog(emit, enemy.label + "The cannon locks on.");
+        break;
+      case 2:
+        damagePlayer(state, 10, "Cannon Blast", emit);
+        break;
+      default:
+        emitLog(emit, enemy.label + enemy.label + " vents heat and repositions.");
+        enemy.tracksDamaged = Math.max(0, enemy.tracksDamaged - 1); // Tracks heal over time
+        break;
+    }
+
+    enemy.cycleIndex = (enemy.cycleIndex + 1) % 4;
+  },
+};
+
 export const ENEMY_ORDER: EnemyId[] = [
   "rat_swarm",
   "riot_droid",
   "sniper",
   "drone",
+  "tank",
 ];
 
 export const createEnemyState = (enemyId: EnemyId): EnemyState => {
@@ -363,6 +461,8 @@ export const createEnemyState = (enemyId: EnemyId): EnemyState => {
       return sniperDef.createState();
     case "drone":
       return droneDef.createState();
+    case "tank":
+      return tankDef.createState();
   }
 };
 
@@ -376,6 +476,8 @@ export const getEnemyDef = <TEnemy extends EnemyState>(enemy: TEnemy): EnemyDef<
       return sniperDef as unknown as EnemyDef<TEnemy>;
     case "drone":
       return droneDef as unknown as EnemyDef<TEnemy>;
+    case "tank":
+      return tankDef as unknown as EnemyDef<TEnemy>;
   }
 };
 

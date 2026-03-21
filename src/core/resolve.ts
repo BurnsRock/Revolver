@@ -24,6 +24,7 @@ import type {
   RatSwarmState,
   RiotDroidState,
   SniperState,
+  TankState,
 } from "./types";
 
 const PLAYER_MAX_HP = 35;
@@ -44,6 +45,8 @@ const cloneEnemy = (enemy: EnemyState): EnemyState => {
     case "sniper":
       return { ...enemy };
     case "drone":
+      return { ...enemy };
+    case "tank":
       return { ...enemy };
   }
 };
@@ -206,6 +209,13 @@ const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
   if (hasAccessory(state, "shock_padding")) {
     grantGuard(state, 4, events, ACCESSORY_DEFS.shock_padding.label);
   }
+
+  // For TANK, blank also reduces heat
+  if (state.enemy.id === "tank") {
+    const heatReduced = Math.min(state.heat, 2);
+    state.heat -= heatReduced;
+    emitLog(events, `Blank vents heat from the revolver. (-${heatReduced} heat)`);
+  }
 };
 
 const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
@@ -214,6 +224,20 @@ const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEve
     removeSwarmStacks(state.enemy, 3 + extra + comboBonus, events, "Birdshot");
     return;
   }
+
+  if (state.enemy.id === "tank") {
+    const warden = state.enemy as TankState;
+    warden.tracksDamaged += 2 + extra + comboBonus;
+    damageEnemy(state, 1 + comboBonus, "Birdshot", events);
+    emitLog(events, `Birdshot damages the tracks! (${warden.tracksDamaged} total damage)`);
+    if (warden.tracksDamaged >= 5 && warden.cycleIndex % 4 !== 3) {
+      // Force into exposed state
+      warden.cycleIndex = 3;
+      emitLog(events, "The treads buckle! TANK is forced into exposure.");
+    }
+    return;
+  }
+
   damageEnemy(state, 2 + extra + comboBonus, "Birdshot", events);
 };
 
@@ -255,6 +279,17 @@ const applySlug = (state: CombatState, comboBonus: number, events: CombatEvent[]
 
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 1 + comboBonus, events, "Slug");
+    return;
+  }
+
+  if (state.enemy.id === "tank") {
+    const warden = state.enemy as TankState;
+    if (tags.includes("fortified")) {
+      damageEnemy(state, 8 + bonusDamage + comboBonus, "Slug", events, true); // Ignore armor
+      emitLog(events, "Slug punches through the fortified armor!");
+      return;
+    }
+    damageEnemy(state, 4 + bonusDamage + comboBonus, "Slug", events);
     return;
   }
 

@@ -19,6 +19,7 @@ const UI_TEXTURE_KEYS = {
   riot_droid: "ui-riot-droid",
   sniper: "ui-sniper",
   drone: "ui-drone",
+  tank: "ui-tank",
   birdshot: "ui-birdshot",
   buckshot: "ui-buckshot",
   slug: "ui-slug",
@@ -73,12 +74,14 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   riot_droid: 16,
   sniper: 14,
   drone: 18,
+  tank: 25,
 };
 const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   rat_swarm: UI_TEXTURE_KEYS.rat_swarm,
   riot_droid: UI_TEXTURE_KEYS.riot_droid,
   sniper: UI_TEXTURE_KEYS.sniper,
   drone: UI_TEXTURE_KEYS.drone,
+  tank: UI_TEXTURE_KEYS.tank,
 };
 const cylinderImageUrl = new URL("../assets/images/initial/CYLINDER.PNG", import.meta.url).href;
 const birdshotImageUrl = new URL("../assets/images/initial/BIRD.PNG", import.meta.url).href;
@@ -91,6 +94,7 @@ const ratSwarmImageUrl = new URL("../assets/images/initial/RAT SWARM.PNG", impor
 const riotDroidImageUrl = new URL("../assets/images/initial/RIOT DROID.PNG", import.meta.url).href;
 const slugImageUrl = new URL("../assets/images/initial/SLUG.PNG", import.meta.url).href;
 const sniperImageUrl = new URL("../assets/images/initial/SNIPER.PNG", import.meta.url).href;
+const tankImageUrl = new URL("../assets/images/initial/TANK.PNG", import.meta.url).href;
 const armorPiercingImageUrl = new URL("../assets/images/initial/AP.PNG", import.meta.url).href;
 const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
   birdshot: UI_TEXTURE_KEYS.birdshot,
@@ -201,6 +205,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image(UI_TEXTURE_KEYS.riot_droid, riotDroidImageUrl);
     this.load.image(UI_TEXTURE_KEYS.sniper, sniperImageUrl);
     this.load.image(UI_TEXTURE_KEYS.drone, droneImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.tank, tankImageUrl);
     this.load.image(UI_TEXTURE_KEYS.birdshot, birdshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.buckshot, buckshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.slug, slugImageUrl);

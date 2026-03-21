@@ -33,6 +33,9 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
       if (state.enemy.id === "rat_swarm") {
         return 9;
       }
+      if (state.enemy.id === "tank" && !tags.has("exposed")) {
+        return 6; // Damage tracks
+      }
       if (tags.has("armored") || tags.has("shielded")) {
         return 0.5;
       }
@@ -58,6 +61,9 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
       if (state.enemy.id === "rat_swarm") {
         return 1;
       }
+      if (state.enemy.id === "tank" && tags.has("fortified")) {
+        return 9; // Best against fortified
+      }
       if (tags.has("evasive")) {
         return 0.5;
       }
@@ -79,6 +85,9 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
       }
       return 2;
     case "blank":
+      if (state.enemy.id === "tank" && tags.has("firing")) {
+        return 9; // Block cannon
+      }
       if (incomingDamage >= 12) {
         return 7;
       }

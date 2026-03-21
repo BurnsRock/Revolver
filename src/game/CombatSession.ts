@@ -11,6 +11,7 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   riot_droid: 16,
   sniper: 14,
   drone: 18,
+  tank: 25,
 };
 
 export type ScreenMode = "main_menu" | "combat" | "shop" | "death" | "victory";
