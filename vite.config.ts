@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
 
-export default defineConfig({
-  base: "/Revolver/",
-})
+export default defineConfig(({ mode }) => ({
+  base: mode === "android" ? "./" : "/Revolver/",
+}));
