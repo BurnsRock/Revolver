@@ -21,12 +21,19 @@ const UI_TEXTURE_KEYS = {
   drone: "ui-drone",
   tank: "ui-tank",
   phantom_gunman: "ui-phantom-gunman",
+  basic: "ui-basic",
   birdshot: "ui-birdshot",
   buckshot: "ui-buckshot",
   slug: "ui-slug",
   armor_piercing: "ui-armor-piercing",
   flechette: "ui-flechette",
   blank: "ui-blank",
+  tranq: "ui-tranq",
+  mark: "ui-mark",
+  seed: "ui-seed",
+  pork: "ui-pork",
+  flare: "ui-flare",
+  explosive: "ui-explosive",
 } as const;
 const CHAMBER_POSITIONS = [
   { x: 601, y: 123 },
@@ -38,6 +45,11 @@ const CHAMBER_POSITIONS = [
 ] as const;
 
 const BULLET_TOOLTIP_LINES = {
+  basic: {
+    damage: "3",
+    effect: "Standard damage",
+    effectiveVs: "General purpose",
+  },
   birdshot: {
     damage: "2, or 3 stacks vs swarm",
     effect: "Wide spread clears multiple swarm bodies",
@@ -68,6 +80,36 @@ const BULLET_TOOLTIP_LINES = {
     effect: "Gain 6 guard",
     effectiveVs: "Big incoming hits",
   },
+  tranq: {
+    damage: "1",
+    effect: "Sedates target, reducing next action",
+    effectiveVs: "Dangerous enemies",
+  },
+  mark: {
+    damage: "1",
+    effect: "Marks target for bonus damage on next hit",
+    effectiveVs: "Setup for follow-up",
+  },
+  seed: {
+    damage: "1",
+    effect: "Seeds damage-over-time",
+    effectiveVs: "Stacked targets",
+  },
+  pork: {
+    damage: "Variable",
+    effect: "Deals damage based on enemy type",
+    effectiveVs: "Specific matchups",
+  },
+  flare: {
+    damage: "2",
+    effect: "Reveals hidden or evasive targets",
+    effectiveVs: "Hidden targets",
+  },
+  explosive: {
+    damage: "4-8",
+    effect: "Area damage",
+    effectiveVs: "Groups or fortified",
+  },
 } as const;
 
 const ENEMY_REWARDS: Record<EnemyId, number> = {
@@ -87,26 +129,41 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   phantom_gunman: UI_TEXTURE_KEYS.phantom_gunman,
 };
 const cylinderImageUrl = new URL("../assets/images/initial/CYLINDER.PNG", import.meta.url).href;
-const birdshotImageUrl = new URL("../assets/images/initial/BIRD.PNG", import.meta.url).href;
-const buckshotImageUrl = new URL("../assets/images/initial/BUCK.PNG", import.meta.url).href;
-const blankImageUrl = new URL("../assets/images/initial/BLANK.PNG", import.meta.url).href;
-const droneImageUrl = new URL("../assets/images/initial/DRONE.PNG", import.meta.url).href;
-const flechetteImageUrl = new URL("../assets/images/initial/FLECHETTES.PNG", import.meta.url).href;
 const playerImageUrl = new URL("../assets/images/initial/PLAYER.PNG", import.meta.url).href;
 const ratSwarmImageUrl = new URL("../assets/images/initial/RAT SWARM.PNG", import.meta.url).href;
 const riotDroidImageUrl = new URL("../assets/images/initial/RIOT DROID.PNG", import.meta.url).href;
-const slugImageUrl = new URL("../assets/images/initial/SLUG.PNG", import.meta.url).href;
 const sniperImageUrl = new URL("../assets/images/initial/SNIPER.PNG", import.meta.url).href;
+const droneImageUrl = new URL("../assets/images/initial/DRONE.PNG", import.meta.url).href;
 const tankImageUrl = new URL("../assets/images/initial/TANK.PNG", import.meta.url).href;
 const phantomGunmanImageUrl = new URL("../assets/images/initial/PHANTOM GUNMAN.PNG", import.meta.url).href;
+
+const basicImageUrl = new URL("../assets/images/initial/Basic.PNG", import.meta.url).href;
+const birdshotImageUrl = new URL("../assets/images/initial/Birdshot.PNG", import.meta.url).href;
+const buckshotImageUrl = new URL("../assets/images/initial/Buckshot.PNG", import.meta.url).href;
+const slugImageUrl = new URL("../assets/images/initial/Slug.PNG", import.meta.url).href;
 const armorPiercingImageUrl = new URL("../assets/images/initial/AP.PNG", import.meta.url).href;
+const flechetteImageUrl = new URL("../assets/images/initial/Flechette.PNG", import.meta.url).href;
+const blankImageUrl = new URL("../assets/images/initial/Blank.PNG", import.meta.url).href;
+const tranqImageUrl = new URL("../assets/images/initial/Dart.PNG", import.meta.url).href;
+const markImageUrl = new URL("../assets/images/initial/Mark.PNG", import.meta.url).href;
+const seedImageUrl = new URL("../assets/images/initial/Seed.PNG", import.meta.url).href;
+const porkImageUrl = new URL("../assets/images/initial/Pork.PNG", import.meta.url).href;
+const flareImageUrl = new URL("../assets/images/initial/Flare.PNG", import.meta.url).href;
+const explosiveImageUrl = new URL("../assets/images/initial/Explosive.PNG", import.meta.url).href;
 const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
+  basic: UI_TEXTURE_KEYS.basic,
   birdshot: UI_TEXTURE_KEYS.birdshot,
   buckshot: UI_TEXTURE_KEYS.buckshot,
   slug: UI_TEXTURE_KEYS.slug,
   armor_piercing: UI_TEXTURE_KEYS.armor_piercing,
   flechette: UI_TEXTURE_KEYS.flechette,
   blank: UI_TEXTURE_KEYS.blank,
+  tranq: UI_TEXTURE_KEYS.tranq,
+  mark: UI_TEXTURE_KEYS.mark,
+  seed: UI_TEXTURE_KEYS.seed,
+  pork: UI_TEXTURE_KEYS.pork,
+  flare: UI_TEXTURE_KEYS.flare,
+  explosive: UI_TEXTURE_KEYS.explosive,
 };
 
 type ChamberVisual = {
@@ -211,12 +268,20 @@ export class CombatScene extends Phaser.Scene {
     this.load.image(UI_TEXTURE_KEYS.drone, droneImageUrl);
     this.load.image(UI_TEXTURE_KEYS.tank, tankImageUrl);
     this.load.image(UI_TEXTURE_KEYS.phantom_gunman, phantomGunmanImageUrl);
+
+    this.load.image(UI_TEXTURE_KEYS.basic, basicImageUrl);
     this.load.image(UI_TEXTURE_KEYS.birdshot, birdshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.buckshot, buckshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.slug, slugImageUrl);
     this.load.image(UI_TEXTURE_KEYS.armor_piercing, armorPiercingImageUrl);
     this.load.image(UI_TEXTURE_KEYS.flechette, flechetteImageUrl);
     this.load.image(UI_TEXTURE_KEYS.blank, blankImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.tranq, tranqImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.mark, markImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.seed, seedImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.pork, porkImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.flare, flareImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.explosive, explosiveImageUrl);
   }
 
   public renderGameToText(): string {

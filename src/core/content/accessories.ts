@@ -5,10 +5,11 @@ export const ACCESSORY_ORDER: AccessoryId[] = [
   "spring_ratchet",
   "quickloader_holster",
   "shock_padding",
-  "rifled_tools",
-  "shredder_tools",
-  "tungsten_core",
-  "honed_choke",
+  "shotgun_mod",
+  "rifle_mod",
+  "hunter_mod",
+  "bioweapon_mod",
+  "pyrotechnics_mod",
 ];
 
 export const ACCESSORY_DEFS: Record<AccessoryId, AccessoryDef> = {
@@ -17,7 +18,7 @@ export const ACCESSORY_DEFS: Record<AccessoryId, AccessoryDef> = {
     label: "Spring Ratchet",
     price: 10,
     description: "A smoother cylinder hand that rewards setup turns.",
-    effect: "Rotate grants 1 guard.",
+    effect: "Rotate grants 5 guard.",
   },
   quickloader_holster: {
     id: "quickloader_holster",
@@ -33,33 +34,46 @@ export const ACCESSORY_DEFS: Record<AccessoryId, AccessoryDef> = {
     description: "Recoil baffles that turn blanks into real protection.",
     effect: "Blank grants +4 extra guard.",
   },
-  rifled_tools: {
-    id: "rifled_tools",
-    label: "Rifled Tools",
+
+  shotgun_mod: {
+    id: "shotgun_mod",
+    label: "Shotgun Mod",
     price: 15,
-    description: "A tune-up kit for heavier shells.",
-    effect: "Slug and Buckshot deal +1 damage.",
+    description: "A versatile shotgun kit for close-quarters combat.",
+    effect: "Shotgun shells deal +1 damage and have improved spread.",
+    unlocks: ["birdshot", "buckshot", "slug"],
   },
-  shredder_tools: {
-    id: "shredder_tools",
-    label: "Shredder Tools",
-    price: 15,
-    description: "Barbed inserts that make flechettes cling and tear.",
-    effect: "Flechette adds +1 shred or +1 infestation.",
-  },
-  tungsten_core: {
-    id: "tungsten_core",
-    label: "Tungsten Core",
+  rifle_mod: {
+    id: "rifle_mod",
+    label: "Rifle Mod",
     price: 16,
-    description: "Dense penetrators tuned for plating and riot shields.",
-    effect: "Armor Piercing gains +2 damage against armored targets.",
+    description: "Precision rifle modifications for long-range accuracy.",
+    effect: "Rifle rounds pierce armor and shred defenses.",
+    unlocks: ["armor_piercing", "flechette"],
   },
-  honed_choke: {
-    id: "honed_choke",
-    label: "Honed Choke",
-    price: 13,
-    description: "A tighter spread for better pellet concentration.",
-    effect: "Birdshot clears +1 extra swarm stack or deals +1 damage.",
+  hunter_mod: {
+    id: "hunter_mod",
+    label: "Hunter Mod",
+    price: 14,
+    description: "Specialized hunting tools for tracking and sedation.",
+    effect: "Hunter darts mark targets and sedate enemies.",
+    unlocks: ["tranq", "mark"],
+  },
+  bioweapon_mod: {
+    id: "bioweapon_mod",
+    label: "Bioweapon Mod",
+    price: 17,
+    description: "Experimental biological ammunition.",
+    effect: "Bioweapons cause infestation and variable damage.",
+    unlocks: ["seed", "pork"],
+  },
+  pyrotechnics_mod: {
+    id: "pyrotechnics_mod",
+    label: "Pyrotechnics Mod",
+    price: 15,
+    description: "Fireworks and explosives for dramatic effect.",
+    effect: "Pyrotechnic rounds illuminate and detonate on impact.",
+    unlocks: ["flare", "explosive"],
   },
 };
 

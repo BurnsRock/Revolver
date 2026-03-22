@@ -29,6 +29,8 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
   const incomingDamage = intent.previewDamage ?? 0;
 
   switch (bullet) {
+    case "basic":
+      return 3; // Standard damage
     case "birdshot":
       if (state.enemy.id === "rat_swarm") {
         return 9;
@@ -104,6 +106,8 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
         return 4;
       }
       return 0.25;
+    default:
+      return 1; // Default score for unhandled bullets
   }
 };
 

@@ -54,8 +54,10 @@ const ratSwarmDef: EnemyDef<RatSwarmState> = {
     shred: 0,
     cycleIndex: 0,
     stacks: 6,
-    infestation: 0,
-  }),
+    infestation: 0,    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,  }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 3) {
       case 0:
@@ -133,6 +135,11 @@ const riotDroidDef: EnemyDef<RiotDroidState> = {
     armor: 0,
     shred: 0,
     cycleIndex: 0,
+    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,
   }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 4) {
@@ -217,8 +224,11 @@ const sniperDef: EnemyDef<SniperState> = {
     armor: 0,
     shred: 0,
     cycleIndex: 0,
-    interrupted: false,
-  }),
+    interrupted: false,    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,  }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 3) {
       case 0:
@@ -281,8 +291,11 @@ const droneDef: EnemyDef<DroneState> = {
     maxHp: 24,
     armor: 0,
     shred: 0,
-    cycleIndex: 0,
-  }),
+    cycleIndex: 0,    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,  }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 4) {
       case 0:
@@ -361,6 +374,11 @@ const tankDef: EnemyDef<TankState> = {
     shred: 0,
     cycleIndex: 0,
     tracksDamaged: 0,
+    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,
   }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 4) {
@@ -456,6 +474,11 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
     armor: 0,
     shred: 0,
     cycleIndex: 0,
+    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,
   }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 5) {

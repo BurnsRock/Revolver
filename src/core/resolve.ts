@@ -104,8 +104,21 @@ const damageEnemy = (
   ignoreArmor: boolean = false,
 ): number => {
   const enemy = state.enemy;
-  const blocked = ignoreArmor ? 0 : Math.min(effectiveArmor(enemy), amount);
-  const applied = Math.max(0, amount - blocked);
+  let extra = 0;
+  if (enemy.marked) {
+    extra += 2;
+    enemy.marked = false;
+    emitLog(events, "Marked target takes +2 bonus damage.");
+  }
+  if (enemy.porked) {
+    extra += 1;
+    enemy.porked = false;
+    emitLog(events, "Porked target is destabilized, taking +1 bonus damage.");
+  }
+
+  const effectiveAmount = amount + extra;
+  const blocked = ignoreArmor ? 0 : Math.min(effectiveArmor(enemy), effectiveAmount);
+  const applied = Math.max(0, effectiveAmount - blocked);
   enemy.hp = Math.max(0, enemy.hp - applied);
   events.push({
     type: "enemy_damaged",
@@ -230,8 +243,56 @@ const applyBlank = (state: CombatState, events: CombatEvent[]): void => {
   }
 };
 
+const applyBasic = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  damageEnemy(state, 3 + comboBonus, "Revolver Round", events);
+};
+
+const applyTranq = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  damageEnemy(state, 1 + comboBonus, "Tranq Dart", events);
+  state.enemy.stun = (state.enemy.stun ?? 0) + 1;
+  events.push({ type: "status_applied", target: "enemy", status: "stun", amount: 1, total: state.enemy.stun });
+  emitLog(events, "Tranq Dart puts the enemy off-balance.");
+};
+
+const applyMark = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  damageEnemy(state, 0 + comboBonus, "Marking Dart", events);
+  state.enemy.marked = true;
+  events.push({ type: "status_applied", target: "enemy", status: "marked", amount: 1, total: 1 });
+  emitLog(events, "Target is marked for bonus damage.");
+};
+
+const applySeed = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  damageEnemy(state, 1 + comboBonus, "Seed Round", events);
+  state.enemy.infestation = (state.enemy.infestation ?? 0) + 2;
+  events.push({ type: "status_applied", target: "enemy", status: "infestation", amount: 2, total: state.enemy.infestation });
+  emitLog(events, "Seed implant starts to spread infection.");
+};
+
+const applyPork = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  damageEnemy(state, 1 + comboBonus, "Pork Round", events);
+  state.enemy.porked = true;
+  events.push({ type: "status_applied", target: "enemy", status: "porked", amount: 1, total: 1 });
+  emitLog(events, "Pork Round destabilizes the target for follow-up attacks.");
+};
+
+const applyFlare = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  damageEnemy(state, 2 + comboBonus, "Flare Shot", events);
+  state.enemy.burn = (state.enemy.burn ?? 0) + 2;
+  events.push({ type: "status_applied", target: "enemy", status: "burn", amount: 2, total: state.enemy.burn });
+  emitLog(events, "Flare Shot ignites the target.");
+};
+
+const applyExplosive = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  const bonus = state.enemy.burn && state.enemy.burn > 0 ? 2 : 0;
+  damageEnemy(state, 4 + comboBonus + bonus, "Explosive Round", events);
+  emitLog(events, "Explosive Round detonates on impact.");
+  if (bonus > 0) {
+    emitLog(events, "Fire intensifies the explosion.");
+  }
+};
+
 const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
-  const extra = hasAccessory(state, "honed_choke") ? 1 : 0;
+  const extra = hasAccessory(state, "shotgun_mod") ? 1 : 0;
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 3 + extra + comboBonus, events, "Birdshot");
     return;
@@ -255,7 +316,7 @@ const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEve
 
 const applyBuckshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const tags = getEnemyTags(state.enemy);
-  const bonusDamage = hasAccessory(state, "rifled_tools") ? 1 : 0;
+  const bonusDamage = hasAccessory(state, "shotgun_mod") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 2 + comboBonus, events, "Buckshot");
@@ -287,7 +348,7 @@ const applyBuckshot = (state: CombatState, comboBonus: number, events: CombatEve
 
 const applySlug = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   const tags = getEnemyTags(state.enemy);
-  const bonusDamage = hasAccessory(state, "rifled_tools") ? 1 : 0;
+  const bonusDamage = hasAccessory(state, "shotgun_mod") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 1 + comboBonus, events, "Slug");
@@ -336,13 +397,13 @@ const applySlug = (state: CombatState, comboBonus: number, events: CombatEvent[]
 };
 
 const applyArmorPiercing = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
-  const armoredBonus = hasAccessory(state, "tungsten_core") && hasArmor(state.enemy) ? 2 : 0;
+  const armoredBonus = hasAccessory(state, "rifle_mod") && hasArmor(state.enemy) ? 2 : 0;
   const damage = hasArmor(state.enemy) ? 6 + armoredBonus + comboBonus : 3 + comboBonus;
   damageEnemy(state, damage, "Armor Piercing", events, true);
 };
 
 const applyFlechette = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
-  const extraStatus = hasAccessory(state, "shredder_tools") ? 1 : 0;
+  const extraStatus = hasAccessory(state, "rifle_mod") ? 1 : 0;
   if (state.enemy.id === "rat_swarm") {
     removeSwarmStacks(state.enemy, 1 + comboBonus, events, "Flechette");
     state.enemy.infestation += 3 + extraStatus;
@@ -381,6 +442,9 @@ const resolveBullet = (
   events: CombatEvent[],
 ): void => {
   switch (bullet) {
+    case "basic":
+      applyBasic(state, comboBonus, events);
+      break;
     case "birdshot":
       applyBirdshot(state, comboBonus, events);
       break;
@@ -396,8 +460,29 @@ const resolveBullet = (
     case "flechette":
       applyFlechette(state, comboBonus, events);
       break;
+    case "tranq":
+      applyTranq(state, comboBonus, events);
+      break;
+    case "mark":
+      applyMark(state, comboBonus, events);
+      break;
+    case "seed":
+      applySeed(state, comboBonus, events);
+      break;
+    case "pork":
+      applyPork(state, comboBonus, events);
+      break;
+    case "flare":
+      applyFlare(state, comboBonus, events);
+      break;
+    case "explosive":
+      applyExplosive(state, comboBonus, events);
+      break;
     case "blank":
       applyBlank(state, events);
+      break;
+    default:
+      emitLog(events, `No effect for ${bullet}.`);
       break;
   }
 };
@@ -482,6 +567,32 @@ const resolveEnemyTurn = (
 ): "victory" | "defeat" | null => {
   const enemyDef = getEnemyDef(state.enemy);
   enemyDef.onTurnStart?.(state, state.enemy as never, (event) => events.push(event));
+
+  if (state.enemy.burn && state.enemy.burn > 0) {
+    damageEnemy(state, 1, "Burn", events);
+    state.enemy.burn -= 1;
+    events.push({ type: "status_applied", target: "enemy", status: "burn", amount: 1, total: state.enemy.burn });
+    emitLog(events, "Burn continues to rack the enemy.");
+  }
+
+  if (state.enemy.id !== "rat_swarm" && state.enemy.infestation && state.enemy.infestation > 0) {
+    damageEnemy(state, 1, "Infestation", events);
+    state.enemy.infestation -= 1;
+    events.push({ type: "status_applied", target: "enemy", status: "infestation", amount: 1, total: state.enemy.infestation });
+    emitLog(events, "Infestation spreads in the enemy flesh.");
+  }
+
+  if (state.enemy.stun && state.enemy.stun > 0) {
+    state.enemy.stun -= 1;
+    emitLog(events, "Enemy is stunned and skips its action.");
+    if (isEnemyDefeated(state.enemy)) {
+      return "victory";
+    }
+    if (state.player.hp <= 0) {
+      return "defeat";
+    }
+    return null;
+  }
 
   if (isEnemyDefeated(state.enemy)) {
     return "victory";
@@ -568,7 +679,7 @@ export const stepCombat = (
         `Rotate ${CYLINDER_ROTATION_DIRECTION} to chamber ${nextState.cylinder.currentIndex + 1}.`,
       );
       if (hasAccessory(nextState, "spring_ratchet")) {
-        grantGuard(nextState, 1, events, ACCESSORY_DEFS.spring_ratchet.label);
+        grantGuard(nextState, 5, events, ACCESSORY_DEFS.spring_ratchet.label);
       }
       break;
     case "spin": {

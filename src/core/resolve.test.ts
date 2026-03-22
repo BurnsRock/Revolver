@@ -96,8 +96,19 @@ describe("combat matchups", () => {
     expect(result.state.player.guard).toBe(1);
   });
 
-  it("shredder tools increases flechette shred on riot droid", () => {
-    const droidState = createCombatState(6, "riot_droid", undefined, ["shredder_tools"]);
+  it("basic bullet deals standard damage", () => {
+    const droidState = createCombatState(6, "riot_droid");
+    const result = stepCombat(withBulletReady(droidState, "basic"), "fire");
+
+    expect(result.state.enemy.id).toBe("riot_droid");
+    if (result.state.enemy.id !== "riot_droid") {
+      throw new Error("Expected riot droid result.");
+    }
+    expect(result.state.enemy.hp).toBe(droidState.enemy.hp - 3);
+  });
+
+  it("rifle mod increases flechette shred on riot droid", () => {
+    const droidState = createCombatState(6, "riot_droid", undefined, ["rifle_mod"]);
     const result = stepCombat(withBulletReady(droidState, "flechette"), "fire");
 
     expect(result.state.enemy.id).toBe("riot_droid");
@@ -166,6 +177,38 @@ describe("combat matchups", () => {
     state = stepCombat(state, "fire").state;
     expect(state.heat).toBe(5);
     expect(state.player.hp).toBe(29);
+  });
+
+  it("tranq bullet stuns enemy for one turn", () => {
+    const base = createCombatState(11, "drone");
+    base.enemy.cycleIndex = 2; // would be laser damage if not stunned
+    const state = withBulletReady(base, "tranq");
+    const result = stepCombat(state, "fire");
+    expect(result.state.enemy.stun).toBe(0);
+    expect(result.state.player.hp).toBe(35); // stun prevented the hit
+  });
+
+  it("mark bullet amplifies next hit", () => {
+    let state = withLoadedCylinder(createCombatState(12, "drone"), ["mark", "basic"]);
+    state = stepCombat(state, "fire").state;
+    const after = stepCombat(state, "fire").state;
+    expect(after.enemy.hp).toBe(24 - 6); // basic 3 + combo 1 + mark 2
+  });
+
+  it("seed bullet applies infestation damage over time", () => {
+    let state = withLoadedCylinder(createCombatState(13, "drone"), ["seed", "blank"]);
+    state = stepCombat(state, "fire").state;
+    expect(state.enemy.infestation).toBe(1);
+    const after = stepCombat(state, "rotate").state;
+    expect(after.enemy.hp).toBeLessThan(state.enemy.hp);
+  });
+
+  it("flare and explosive interact with burn", () => {
+    let state = withLoadedCylinder(createCombatState(14, "drone"), ["flare", "explosive"]);
+    state = stepCombat(state, "fire").state;
+    expect(state.enemy.burn).toBeGreaterThan(0);
+    const after = stepCombat(state, "fire").state;
+    expect(after.enemy.hp).toBeLessThan(state.enemy.hp - 3);
   });
 
   it("heat 6 skips the next turn and resets back to 0", () => {

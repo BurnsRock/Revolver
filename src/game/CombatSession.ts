@@ -1,4 +1,5 @@
 import { ACCESSORY_DEFS, createShopStock } from "../core/content/accessories";
+import { getLoadout } from "../core/content/bullets";
 import { createEnemyState, ENEMY_ORDER } from "../core/content/enemies";
 import { createCombatState, getCombatSnapshot, stepCombat } from "../core/resolve";
 import type { AccessoryId, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
@@ -153,7 +154,8 @@ export class CombatSession {
     this.encounterIndex = ENEMY_ORDER.indexOf(enemyId);
     this.seedBase += 97;
     this.mode = "combat";
-    this.state = createCombatState(this.seedBase, enemyId, undefined, this.ownedAccessories);
+    const loadout = getLoadout(this.ownedAccessories);
+    this.state = createCombatState(this.seedBase, enemyId, loadout, this.ownedAccessories);
     this.logs = [`Loaded encounter: ${this.state.enemy.label}.`];
   }
 

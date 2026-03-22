@@ -3,21 +3,30 @@ export const CYLINDER_CAPACITY = 6;
 export type PlayerAction = "fire" | "rotate" | "spin" | "reload";
 
 export type BulletType =
+  | "basic"
   | "birdshot"
   | "buckshot"
   | "slug"
   | "armor_piercing"
   | "flechette"
-  | "blank";
+  | "blank"
+  | "tranq"
+  | "mark"
+  | "seed"
+  | "pork"
+  | "flare"
+  | "explosive"
+  ;
 
 export type AccessoryId =
   | "spring_ratchet"
   | "quickloader_holster"
   | "shock_padding"
-  | "rifled_tools"
-  | "shredder_tools"
-  | "tungsten_core"
-  | "honed_choke";
+  | "shotgun_mod"
+  | "rifle_mod"
+  | "hunter_mod"
+  | "bioweapon_mod"
+  | "pyrotechnics_mod";
 
 export type EnemyId = "rat_swarm" | "riot_droid" | "sniper" | "drone" | "tank" | "phantom_gunman";
 
@@ -52,6 +61,7 @@ export interface AccessoryDef {
   price: number;
   description: string;
   effect: string;
+  unlocks?: BulletType[];
 }
 
 export interface EnemyIntentView {
@@ -87,6 +97,11 @@ interface BaseEnemyState {
   armor: number;
   shred: number;
   cycleIndex: number;
+  stun?: number;
+  marked?: boolean;
+  porked?: boolean;
+  burn?: number;
+  infestation?: number;
 }
 
 export interface RatSwarmState extends BaseEnemyState {
