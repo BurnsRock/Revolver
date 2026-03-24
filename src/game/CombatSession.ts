@@ -1,6 +1,6 @@
 import { ACCESSORY_DEFS, createShopStock } from "../core/content/accessories";
 import { getLoadout } from "../core/content/bullets";
-import { createEnemyState, ENEMY_ORDER } from "../core/content/enemies";
+import { createEnemyState, generateEncounterOrder } from "../core/content/enemies";
 import { createCombatState, getCombatSnapshot, stepCombat } from "../core/resolve";
 import type { AccessoryId, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
 
@@ -23,6 +23,7 @@ export type ScreenMode = "main_menu" | "combat" | "shop" | "death" | "victory";
 
 export class CombatSession {
   private encounterIndex = 0;
+  private encounterOrder: EnemyId[][] = [];
   private seedBase = INITIAL_SEED_BASE;
   private shopSeed = INITIAL_SHOP_SEED;
   private mode: ScreenMode = "combat";
@@ -60,8 +61,20 @@ export class CombatSession {
     return this.encounterIndex;
   }
 
+  public setSelectedEnemy(index: number): void {
+    if (this.mode !== "combat") {
+      return;
+    }
+
+    if (index < 0 || index >= this.state.enemies.length) {
+      return;
+    }
+
+    this.state.selectedEnemyIndex = index;
+  }
+
   public hasNextEncounter(): boolean {
-    return this.encounterIndex < ENEMY_ORDER.length - 1;
+    return this.encounterIndex < this.encounterOrder.length - 1;
   }
 
   public getNextEncounterLabel(): string | null {
@@ -69,7 +82,13 @@ export class CombatSession {
       return null;
     }
 
-    return createEnemyState(ENEMY_ORDER[this.encounterIndex + 1]).label;
+    const nextEncounter = this.encounterOrder[this.encounterIndex + 1] ?? [];
+    if (nextEncounter.length === 0) {
+      return null;
+    }
+
+    const labels = nextEncounter.map((enemyId) => createEnemyState(enemyId).label);
+    return labels.join(" + ");
   }
 
   public createRenderPayload(lastAdvanceMs: number): string {
@@ -89,7 +108,7 @@ export class CombatSession {
           : null,
       encounter: {
         index: this.encounterIndex + 1,
-        total: ENEMY_ORDER.length,
+        total: this.encounterOrder.length,
         next: this.getNextEncounterLabel(),
       },
       lastAdvanceMs,
@@ -105,7 +124,8 @@ export class CombatSession {
     this.shopStock = [];
     this.seedBase = INITIAL_SEED_BASE;
     this.shopSeed = INITIAL_SHOP_SEED;
-    this.startEncounter(ENEMY_ORDER[0]);
+    this.encounterOrder = generateEncounterOrder();
+    this.startEncounter(this.encounterOrder[0] ?? []);
   }
 
   public openMainMenu(): void {
@@ -144,22 +164,26 @@ export class CombatSession {
       return false;
     }
 
-    const nextEnemyId = ENEMY_ORDER[this.encounterIndex + 1];
-    if (!nextEnemyId) {
+    const nextEncounter = this.encounterOrder[this.encounterIndex + 1];
+    if (!nextEncounter || nextEncounter.length === 0) {
       return false;
     }
 
-    this.startEncounter(nextEnemyId);
+    this.startEncounter(nextEncounter);
     return true;
   }
 
-  public startEncounter(enemyId: EnemyId): void {
-    this.encounterIndex = ENEMY_ORDER.indexOf(enemyId);
+  public startEncounter(encounterEnemyIds: EnemyId[]): void {
+    this.encounterIndex = this.encounterOrder.findIndex((encounter) => encounter === encounterEnemyIds);
+    if (this.encounterIndex < 0) {
+      this.encounterIndex = 0;
+    }
     this.seedBase += 97;
     this.mode = "combat";
     const loadout = getLoadout(this.ownedAccessories);
-    this.state = createCombatState(this.seedBase, enemyId, loadout, this.ownedAccessories);
-    this.logs = [`Loaded encounter: ${this.state.enemy.label}.`];
+    this.state = createCombatState(this.seedBase, encounterEnemyIds, loadout, this.ownedAccessories);
+    const labels = this.state.enemies.map((enemy) => enemy.label).join(" + ");
+    this.logs = [`Loaded encounter: ${labels}.`];
   }
 
   public performAction(action: PlayerAction): CombatEvent[] {
@@ -172,7 +196,7 @@ export class CombatSession {
       return [];
     }
 
-    const result = stepCombat(this.state, action);
+    const result = stepCombat(this.state, action, this.state.selectedEnemyIndex);
     this.state = result.state;
     result.events.forEach((event) => this.consumeEvent(event));
 
@@ -181,7 +205,7 @@ export class CombatSession {
     }
 
     if (this.state.outcome === "victory") {
-      const reward = ENEMY_REWARDS[this.state.enemy.id];
+      const reward = this.state.enemies.reduce((sum, enemy) => sum + ENEMY_REWARDS[enemy.id], 0);
       this.money += reward;
       this.pushLog(`Collected $${reward}.`);
       if (this.hasNextEncounter()) {

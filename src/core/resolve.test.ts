@@ -53,8 +53,8 @@ describe("combat matchups", () => {
     if (slugResult.state.enemy.id !== "rat_swarm") {
       throw new Error("Expected rat swarm result for slug.");
     }
-    expect(birdshotResult.state.enemy.stacks).toBe(3);
-    expect(slugResult.state.enemy.stacks).toBe(5);
+    expect(birdshotResult.state.enemy.stacks).toBe(2);
+    expect(slugResult.state.enemy.stacks).toBe(4);
   });
 
   it("armor piercing outperforms slug by more than 2x against a shielded droid", () => {
@@ -91,7 +91,7 @@ describe("combat matchups", () => {
 
     const result = stepCombat(state, "reload");
 
-    expect(result.state.player.guard).toBe(3);
+    expect(result.state.player.guard).toBe(5);
   });
 
   it("spring ratchet grants guard on rotate", () => {
@@ -100,7 +100,7 @@ describe("combat matchups", () => {
 
     const result = stepCombat(state, "rotate");
 
-    expect(result.state.player.guard).toBe(5);
+    expect(result.state.player.guard).toBe(7);
   });
 
   it("basic bullet deals standard damage", () => {
@@ -111,7 +111,7 @@ describe("combat matchups", () => {
     if (result.state.enemy.id !== "riot_droid") {
       throw new Error("Expected riot droid result.");
     }
-    expect(result.state.enemy.hp).toBe(droidState.enemy.hp - 3);
+    expect(result.state.enemy.hp).toBe(droidState.enemy.hp - 4);
   });
 
   it("starter loadout includes hollow point and frangible without accessories", () => {
@@ -154,7 +154,7 @@ describe("combat matchups", () => {
     const basicDamage = droneBase.enemy.hp - basicVsDrone.state.enemy.hp;
 
     expect(frangibleDamage).toBeLessThan(basicDamage);
-    expect(frangibleVsDrone.state.player.guard).toBe(2);
+    expect(frangibleVsDrone.state.player.guard).toBe(3);
 
     const swarmBase = createCombatState(18, "rat_swarm");
     const frangibleVsSwarm = stepCombat(withBulletReady(swarmBase, "frangible"), "fire");
@@ -163,10 +163,10 @@ describe("combat matchups", () => {
     if (frangibleVsSwarm.state.enemy.id !== "rat_swarm") {
       throw new Error("Expected rat swarm result.");
     }
-    expect(frangibleVsSwarm.state.enemy.stacks).toBe(2);
+    expect(frangibleVsSwarm.state.enemy.stacks).toBe(1);
     expect(
       frangibleVsSwarm.events.some(
-        (event) => event.type === "guard_gained" && event.amount === 2 && event.total === 2,
+        (event) => event.type === "guard_gained" && event.amount === 3 && event.total === 3,
       ),
     ).toBe(true);
   });
@@ -187,13 +187,13 @@ describe("combat matchups", () => {
 
     const first = stepCombat(state, "fire");
     expect(first.state.combo).toBe(1);
-    expect(first.state.enemy.hp).toBe(21);
+    expect(first.state.enemy.hp).toBe(16);
 
     state = first.state;
     const second = stepCombat(state, "fire");
 
     expect(second.state.combo).toBe(2);
-    expect(second.state.enemy.hp).toBe(17);
+    expect(second.state.enemy.hp).toBe(11);
     expect(second.events.some((event) => event.type === "log" && event.text.includes("Combo +1"))).toBe(true);
   });
 
@@ -216,7 +216,7 @@ describe("combat matchups", () => {
     if (result.state.enemy.id !== "rat_swarm") {
       throw new Error("Expected rat swarm result.");
     }
-    expect(result.state.enemy.stacks).toBe(4);
+    expect(result.state.enemy.stacks).toBe(3);
     expect(result.state.enemy.infestation).toBe(2);
   });
 
@@ -256,7 +256,7 @@ describe("combat matchups", () => {
     let state = withLoadedCylinder(createCombatState(12, "drone"), ["mark", "basic"]);
     state = stepCombat(state, "fire").state;
     const after = stepCombat(state, "fire").state;
-    expect(after.enemy.hp).toBe(24 - 6); // basic 3 + combo 1 + mark 2
+    expect(after.enemy.hp).toBe(13); // scaled round damage and mark bonus
   });
 
   it("seed bullet applies infestation damage over time", () => {
@@ -348,7 +348,7 @@ describe("enemy roster", () => {
     if (result.state.enemy.id !== "field_medic") {
       throw new Error("Expected field medic result.");
     }
-    expect(result.state.enemy.hp).toBe(23);
+    expect(result.state.enemy.hp).toBe(21);
   });
 
   it("hex slinger strips guard before the curse lands", () => {
