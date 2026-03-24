@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { STARTER_LOADOUT, getLoadout } from "./content/bullets";
 import {
+  ENEMY_IDS,
+  createEnemyState,
+  getEnemyCategoryTags,
+  getEnemyTraitTags,
+} from "./content/enemies";
+import {
   createEmptyCylinder,
   fireCurrentRound,
   loadCylinder,
@@ -307,6 +313,58 @@ describe("combat matchups", () => {
     const rotated = stepCombat(state, "rotate");
 
     expect(rotated.state.heat).toBe(0);
+  });
+});
+
+describe("enemy roster", () => {
+  it("every enemy exposes at least one category tag and one trait tag", () => {
+    for (const enemyId of ENEMY_IDS) {
+      const enemy = createEnemyState(enemyId);
+      expect(getEnemyCategoryTags(enemy).length).toBeGreaterThan(0);
+      expect(getEnemyTraitTags(enemy).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("new enemies expose the intended static tags", () => {
+    expect(getEnemyCategoryTags(createEnemyState("mauler_hound"))).toEqual(["beast"]);
+    expect(getEnemyTraitTags(createEnemyState("mauler_hound"))).toEqual(["charging", "evasive"]);
+
+    expect(getEnemyCategoryTags(createEnemyState("field_medic"))).toEqual(["human"]);
+    expect(getEnemyTraitTags(createEnemyState("field_medic"))).toEqual(["support", "ranged"]);
+
+    expect(getEnemyCategoryTags(createEnemyState("hex_slinger"))).toEqual(["supernatural"]);
+    expect(getEnemyTraitTags(createEnemyState("hex_slinger"))).toEqual(["disruptor", "elite", "ranged"]);
+  });
+
+  it("field medic heals during triage", () => {
+    const state = createCombatState(19, "field_medic");
+
+    state.enemy.hp = 20;
+    state.enemy.cycleIndex = 0;
+
+    const result = stepCombat(state, "rotate");
+
+    expect(result.state.enemy.id).toBe("field_medic");
+    if (result.state.enemy.id !== "field_medic") {
+      throw new Error("Expected field medic result.");
+    }
+    expect(result.state.enemy.hp).toBe(23);
+  });
+
+  it("hex slinger strips guard before the curse lands", () => {
+    const state = createCombatState(20, "hex_slinger");
+
+    state.player.guard = 6;
+    state.enemy.cycleIndex = 2;
+
+    const result = stepCombat(state, "rotate");
+
+    expect(result.state.enemy.id).toBe("hex_slinger");
+    if (result.state.enemy.id !== "hex_slinger") {
+      throw new Error("Expected hex slinger result.");
+    }
+    expect(result.state.player.guard).toBe(0);
+    expect(result.state.player.hp).toBe(32);
   });
 });
 

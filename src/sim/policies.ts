@@ -1,4 +1,4 @@
-import { getEnemyIntent, getEnemyTags } from "../core/content/enemies";
+import { getEnemyIntent, getEnemyStateTags } from "../core/content/enemies";
 import type { BulletType, CombatState, PlayerAction } from "../core/types";
 
 export interface SimulationPolicy {
@@ -25,7 +25,7 @@ const getCurrentRound = (state: CombatState): BulletType | null =>
 
 const scoreBullet = (state: CombatState, bullet: BulletType): number => {
   const intent = getEnemyIntent(state.enemy);
-  const tags = new Set([...getEnemyTags(state.enemy), ...intent.tags]);
+  const tags = new Set([...getEnemyStateTags(state.enemy), ...intent.tags]);
   const incomingDamage = intent.previewDamage ?? 0;
 
   switch (bullet) {

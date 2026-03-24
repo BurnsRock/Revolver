@@ -12,6 +12,9 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   riot_droid: 16,
   sniper: 14,
   drone: 18,
+  mauler_hound: 17,
+  field_medic: 16,
+  hex_slinger: 20,
   tank: 25,
   phantom_gunman: 22,
 };

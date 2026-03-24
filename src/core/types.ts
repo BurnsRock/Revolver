@@ -30,9 +30,31 @@ export type AccessoryId =
   | "bioweapon_mod"
   | "pyrotechnics_mod";
 
-export type EnemyId = "rat_swarm" | "riot_droid" | "sniper" | "drone" | "tank" | "phantom_gunman";
+export type EnemyId =
+  | "rat_swarm"
+  | "riot_droid"
+  | "sniper"
+  | "drone"
+  | "mauler_hound"
+  | "field_medic"
+  | "hex_slinger"
+  | "tank"
+  | "phantom_gunman";
 
-export type EnemyTag =
+export type CategoryTag = "beast" | "robotic" | "human" | "supernatural";
+
+export type TraitTag =
+  | "swarm"
+  | "armor"
+  | "evasive"
+  | "ranged"
+  | "support"
+  | "elite"
+  | "boss"
+  | "charging"
+  | "disruptor";
+
+export type EnemyStateTag =
   | "swarm"
   | "armored"
   | "shielded"
@@ -70,7 +92,7 @@ export interface EnemyIntentView {
   id: string;
   label: string;
   detail: string;
-  tags: EnemyTag[];
+  tags: EnemyStateTag[];
   previewDamage?: number;
 }
 
@@ -125,6 +147,18 @@ export interface DroneState extends BaseEnemyState {
   id: "drone";
 }
 
+export interface MaulerHoundState extends BaseEnemyState {
+  id: "mauler_hound";
+}
+
+export interface FieldMedicState extends BaseEnemyState {
+  id: "field_medic";
+}
+
+export interface HexSlingerState extends BaseEnemyState {
+  id: "hex_slinger";
+}
+
 export interface TankState extends BaseEnemyState {
   id: "tank";
   tracksDamaged: number; // For birdshot destabilizing
@@ -139,6 +173,9 @@ export type EnemyState =
   | RiotDroidState
   | SniperState
   | DroneState
+  | MaulerHoundState
+  | FieldMedicState
+  | HexSlingerState
   | TankState
   | PhantomGunmanState;
 
@@ -184,9 +221,11 @@ export interface EnemyDef<TEnemy extends EnemyState = EnemyState> {
   id: EnemyId;
   label: string;
   description: string;
+  categoryTags: readonly CategoryTag[];
+  traitTags: readonly TraitTag[];
   createState: () => TEnemy;
   getIntent: (enemy: TEnemy) => EnemyIntentView;
-  getTags: (enemy: TEnemy) => EnemyTag[];
+  getStateTags: (enemy: TEnemy) => EnemyStateTag[];
   onTurnStart?: (state: CombatState, enemy: TEnemy, emit: EventSink) => void;
   act: (state: CombatState, enemy: TEnemy, emit: EventSink) => void;
 }

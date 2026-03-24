@@ -9,7 +9,14 @@ import {
 } from "./cylinder";
 import { ACCESSORY_DEFS } from "./content/accessories";
 import { BULLET_DEFS, STARTER_LOADOUT } from "./content/bullets";
-import { createEnemyState, getEnemyDef, getEnemyIntent, getEnemyTags } from "./content/enemies";
+import {
+  createEnemyState,
+  getEnemyCategoryTags,
+  getEnemyDef,
+  getEnemyIntent,
+  getEnemyStateTags,
+  getEnemyTraitTags,
+} from "./content/enemies";
 import { createDeckState, discardBullets, drawBullets } from "./deck";
 import { normalizeSeed } from "./rng";
 import type {
@@ -46,6 +53,12 @@ const cloneEnemy = (enemy: EnemyState): EnemyState => {
     case "sniper":
       return { ...enemy };
     case "drone":
+      return { ...enemy };
+    case "mauler_hound":
+      return { ...enemy };
+    case "field_medic":
+      return { ...enemy };
+    case "hex_slinger":
       return { ...enemy };
     case "tank":
       return { ...enemy };
@@ -248,7 +261,7 @@ const applyBasic = (state: CombatState, comboBonus: number, events: CombatEvent[
 };
 
 const applyHollowPoint = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
-  const tags = getEnemyTags(state.enemy);
+  const tags = getEnemyStateTags(state.enemy);
   if (hasArmor(state.enemy) || tags.includes("armored") || tags.includes("shielded")) {
     damageEnemy(state, 1 + comboBonus, "Hollow Point", events);
     emitLog(events, "Hollow Point flattens against armor.");
@@ -344,7 +357,7 @@ const applyBirdshot = (state: CombatState, comboBonus: number, events: CombatEve
 };
 
 const applyBuckshot = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
-  const tags = getEnemyTags(state.enemy);
+  const tags = getEnemyStateTags(state.enemy);
   const bonusDamage = hasAccessory(state, "shotgun_mod") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
@@ -376,7 +389,7 @@ const applyBuckshot = (state: CombatState, comboBonus: number, events: CombatEve
 };
 
 const applySlug = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
-  const tags = getEnemyTags(state.enemy);
+  const tags = getEnemyStateTags(state.enemy);
   const bonusDamage = hasAccessory(state, "shotgun_mod") ? 1 : 0;
 
   if (state.enemy.id === "rat_swarm") {
@@ -799,7 +812,9 @@ export const getCombatSnapshot = (state: CombatState) => ({
     id: state.enemy.id,
     label: state.enemy.label,
     intent: getEnemyIntent(state.enemy),
-    tags: getEnemyTags(state.enemy),
+    tags: getEnemyStateTags(state.enemy),
+    categoryTags: getEnemyCategoryTags(state.enemy),
+    traitTags: getEnemyTraitTags(state.enemy),
     metrics: describeEnemyMetrics(state.enemy),
   },
   cylinder: {

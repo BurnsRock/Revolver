@@ -4,14 +4,17 @@ import type {
   EnemyId,
   EnemyIntentView,
   EnemyState,
-  EnemyTag,
+  EnemyStateTag,
   EventSink,
+  DroneState,
+  FieldMedicState,
+  HexSlingerState,
+  MaulerHoundState,
+  PhantomGunmanState,
   RatSwarmState,
   RiotDroidState,
   SniperState,
-  DroneState,
   TankState,
-  PhantomGunmanState,
 } from "../types";
 
 const emitLog = (emit: EventSink, text: string): void => {
@@ -41,10 +44,24 @@ const damagePlayer = (
   emitLog(emit, `${source} hits for ${applied}.`);
 };
 
+const healEnemy = (enemy: EnemyState, amount: number, emit: EventSink, source: string): void => {
+  const healed = Math.max(0, Math.min(amount, enemy.maxHp - enemy.hp));
+  enemy.hp += healed;
+  emitLog(emit, healed > 0 ? `${source} restores ${healed} HP.` : `${source} finds no wounds to close.`);
+};
+
+const stripPlayerGuard = (state: CombatState, amount: number, emit: EventSink, source: string): void => {
+  const removed = Math.min(state.player.guard, amount);
+  state.player.guard -= removed;
+  emitLog(emit, removed > 0 ? `${source} strips ${removed} guard.` : `${source} finds no guard to unravel.`);
+};
+
 const ratSwarmDef: EnemyDef<RatSwarmState> = {
   id: "rat_swarm",
   label: "Rat Swarm",
   description: "A carpet of bodies that snowballs if left alone.",
+  categoryTags: ["beast"],
+  traitTags: ["swarm"],
   createState: () => ({
     id: "rat_swarm",
     label: "Rat Swarm",
@@ -54,10 +71,12 @@ const ratSwarmDef: EnemyDef<RatSwarmState> = {
     shred: 0,
     cycleIndex: 0,
     stacks: 6,
-    infestation: 0,    stun: 0,
+    infestation: 0,
+    stun: 0,
     marked: false,
     porked: false,
-    burn: 0,  }),
+    burn: 0,
+  }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 3) {
       case 0:
@@ -85,7 +104,7 @@ const ratSwarmDef: EnemyDef<RatSwarmState> = {
         };
     }
   },
-  getTags: () => ["swarm"],
+  getStateTags: () => ["swarm"],
   onTurnStart: (_state, enemy, emit) => {
     if (enemy.infestation <= 0 || enemy.stacks <= 0) {
       return;
@@ -127,6 +146,8 @@ const riotDroidDef: EnemyDef<RiotDroidState> = {
   id: "riot_droid",
   label: "Riot Droid",
   description: "Heavy plating, predictable shield cycle, dangerous baton follow-through.",
+  categoryTags: ["robotic"],
+  traitTags: ["armor", "charging"],
   createState: () => ({
     id: "riot_droid",
     label: "Riot Droid",
@@ -142,30 +163,29 @@ const riotDroidDef: EnemyDef<RiotDroidState> = {
     infestation: 0,
   }),
   getIntent: (enemy) => {
+    const armorTags = enemy.armor > 0 ? (["armored", "shielded"] as EnemyStateTag[]) : [];
+
     switch (enemy.cycleIndex % 4) {
       case 0:
         return {
           id: "shield_up",
           label: "SHIELD_UP",
           detail: "Gain 6 armor.",
-          tags: enemy.armor > 0 ? ["armored", "shielded"] : [],
+          tags: armorTags,
         };
       case 1:
         return {
           id: "advance",
           label: "ADVANCE",
           detail: "Wind up a baton strike.",
-          tags: [
-            "charging",
-            ...(enemy.armor > 0 ? (["armored", "shielded"] as EnemyTag[]) : []),
-          ],
+          tags: ["charging", ...armorTags],
         };
       case 2:
         return {
           id: "baton_strike",
           label: "BATON_STRIKE",
           detail: "Hit for 12.",
-          tags: enemy.armor > 0 ? ["armored", "shielded"] : [],
+          tags: armorTags,
           previewDamage: 12,
         };
       default:
@@ -173,12 +193,12 @@ const riotDroidDef: EnemyDef<RiotDroidState> = {
           id: "cooldown",
           label: "COOLDOWN",
           detail: "Expose the core and drop armor.",
-          tags: ["exposed", ...(enemy.armor > 0 ? (["armored"] as EnemyTag[]) : [])],
+          tags: ["exposed", ...(enemy.armor > 0 ? (["armored"] as EnemyStateTag[]) : [])],
         };
     }
   },
-  getTags: (enemy) => {
-    const tags: EnemyTag[] = [];
+  getStateTags: (enemy) => {
+    const tags: EnemyStateTag[] = [];
     if (enemy.armor > 0) {
       tags.push("armored", "shielded");
     }
@@ -216,6 +236,8 @@ const sniperDef: EnemyDef<SniperState> = {
   id: "sniper",
   label: "Sniper",
   description: "Two turns of aim followed by a lethal shot unless you break the line.",
+  categoryTags: ["human"],
+  traitTags: ["ranged"],
   createState: () => ({
     id: "sniper",
     label: "Sniper",
@@ -224,11 +246,13 @@ const sniperDef: EnemyDef<SniperState> = {
     armor: 0,
     shred: 0,
     cycleIndex: 0,
-    interrupted: false,    stun: 0,
+    interrupted: false,
+    stun: 0,
     marked: false,
     porked: false,
     burn: 0,
-    infestation: 0,  }),
+    infestation: 0,
+  }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 3) {
       case 0:
@@ -255,7 +279,7 @@ const sniperDef: EnemyDef<SniperState> = {
         };
     }
   },
-  getTags: () => ["aiming"],
+  getStateTags: () => ["aiming"],
   act: (state, enemy, emit) => {
     if (enemy.interrupted) {
       enemy.interrupted = false;
@@ -284,6 +308,8 @@ const droneDef: EnemyDef<DroneState> = {
   id: "drone",
   label: "Drone",
   description: "Alternates between a clean hover window and evasive flight before firing.",
+  categoryTags: ["robotic"],
+  traitTags: ["evasive", "ranged"],
   createState: () => ({
     id: "drone",
     label: "Drone",
@@ -291,11 +317,13 @@ const droneDef: EnemyDef<DroneState> = {
     maxHp: 24,
     armor: 0,
     shred: 0,
-    cycleIndex: 0,    stun: 0,
+    cycleIndex: 0,
+    stun: 0,
     marked: false,
     porked: false,
     burn: 0,
-    infestation: 0,  }),
+    infestation: 0,
+  }),
   getIntent: (enemy) => {
     switch (enemy.cycleIndex % 4) {
       case 0:
@@ -329,7 +357,7 @@ const droneDef: EnemyDef<DroneState> = {
         };
     }
   },
-  getTags: (enemy) => {
+  getStateTags: (enemy) => {
     switch (enemy.cycleIndex % 4) {
       case 0:
         return ["hover", "steady"];
@@ -361,10 +389,281 @@ const droneDef: EnemyDef<DroneState> = {
   },
 };
 
+const maulerHoundDef: EnemyDef<MaulerHoundState> = {
+  id: "mauler_hound",
+  label: "Mauler Hound",
+  description: "A fast beast that circles wide, then commits to a brutal pounce.",
+  categoryTags: ["beast"],
+  traitTags: ["charging", "evasive"],
+  createState: () => ({
+    id: "mauler_hound",
+    label: "Mauler Hound",
+    hp: 22,
+    maxHp: 22,
+    armor: 0,
+    shred: 0,
+    cycleIndex: 0,
+    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,
+  }),
+  getIntent: (enemy) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        return {
+          id: "stalk",
+          label: "STALK",
+          detail: "Circle just outside a clean shot.",
+          tags: ["evasive"],
+        };
+      case 1:
+        return {
+          id: "coil",
+          label: "COIL",
+          detail: "Prepare a lunging strike.",
+          tags: ["charging"],
+        };
+      case 2:
+        return {
+          id: "pounce",
+          label: "POUNCE",
+          detail: "Hit for 9.",
+          tags: [],
+          previewDamage: 9,
+        };
+      default:
+        return {
+          id: "overextended",
+          label: "OVEREXTENDED",
+          detail: "Catch its footing in the open.",
+          tags: ["exposed"],
+        };
+    }
+  },
+  getStateTags: (enemy) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        return ["evasive"];
+      case 1:
+        return ["charging"];
+      case 3:
+        return ["exposed"];
+      default:
+        return [];
+    }
+  },
+  act: (state, enemy, emit) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        emitLog(emit, "Mauler Hound keeps circling.");
+        break;
+      case 1:
+        emitLog(emit, "Mauler Hound bunches its muscles for a leap.");
+        break;
+      case 2:
+        damagePlayer(state, 9, "Pounce", emit);
+        break;
+      default:
+        emitLog(emit, "Mauler Hound skids wide and exposes its flank.");
+        break;
+    }
+
+    enemy.cycleIndex = (enemy.cycleIndex + 1) % 4;
+  },
+};
+
+const fieldMedicDef: EnemyDef<FieldMedicState> = {
+  id: "field_medic",
+  label: "Field Medic",
+  description: "Keeps pressure on you while patching wounds and re-establishing a firing lane.",
+  categoryTags: ["human"],
+  traitTags: ["support", "ranged"],
+  createState: () => ({
+    id: "field_medic",
+    label: "Field Medic",
+    hp: 26,
+    maxHp: 26,
+    armor: 0,
+    shred: 0,
+    cycleIndex: 0,
+    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,
+  }),
+  getIntent: (enemy) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        return {
+          id: "triage",
+          label: "TRIAGE",
+          detail: "Recover 3 HP.",
+          tags: ["steady"],
+        };
+      case 1:
+        return {
+          id: "take_aim",
+          label: "TAKE_AIM",
+          detail: "Line up a suppressive burst.",
+          tags: ["aiming"],
+        };
+      case 2:
+        return {
+          id: "suppressive_fire",
+          label: "SUPPRESSIVE_FIRE",
+          detail: "Fire for 7.",
+          tags: ["firing"],
+          previewDamage: 7,
+        };
+      default:
+        return {
+          id: "relocate",
+          label: "RELOCATE",
+          detail: "Move to fresh cover.",
+          tags: ["exposed", "repositioning"],
+        };
+    }
+  },
+  getStateTags: (enemy) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        return ["steady"];
+      case 1:
+        return ["aiming"];
+      case 2:
+        return ["firing"];
+      default:
+        return ["exposed", "repositioning"];
+    }
+  },
+  act: (state, enemy, emit) => {
+    switch (enemy.cycleIndex % 4) {
+      case 0:
+        healEnemy(enemy, 3, emit, "Field Medic triage");
+        break;
+      case 1:
+        emitLog(emit, "Field Medic settles into a firing stance.");
+        break;
+      case 2:
+        damagePlayer(state, 7, "Suppressive Fire", emit);
+        break;
+      default:
+        emitLog(emit, "Field Medic sprints between cover positions.");
+        break;
+    }
+
+    enemy.cycleIndex = (enemy.cycleIndex + 1) % 4;
+  },
+};
+
+const hexSlingerDef: EnemyDef<HexSlingerState> = {
+  id: "hex_slinger",
+  label: "Hex Slinger",
+  description: "A spectral gunslinger that erodes your guard before landing a cursed shot.",
+  categoryTags: ["supernatural"],
+  traitTags: ["disruptor", "elite", "ranged"],
+  createState: () => ({
+    id: "hex_slinger",
+    label: "Hex Slinger",
+    hp: 28,
+    maxHp: 28,
+    armor: 0,
+    shred: 0,
+    cycleIndex: 0,
+    stun: 0,
+    marked: false,
+    porked: false,
+    burn: 0,
+    infestation: 0,
+  }),
+  getIntent: (enemy) => {
+    switch (enemy.cycleIndex % 5) {
+      case 0:
+        return {
+          id: "veil",
+          label: "VEIL",
+          detail: "Slip behind a spectral mirage.",
+          tags: ["hidden"],
+        };
+      case 1:
+        return {
+          id: "sight_hex",
+          label: "SIGHT_HEX",
+          detail: "Fix a cursed sightline.",
+          tags: ["aiming"],
+        };
+      case 2:
+        return {
+          id: "hex_bolt",
+          label: "HEX_BOLT",
+          detail: "Strip guard and deal 5.",
+          tags: ["firing"],
+          previewDamage: 5,
+        };
+      case 3:
+        return {
+          id: "manifest",
+          label: "MANIFEST",
+          detail: "Solidify in the open.",
+          tags: ["exposed"],
+        };
+      default:
+        return {
+          id: "drift",
+          label: "DRIFT",
+          detail: "Glide to a new angle.",
+          tags: ["repositioning"],
+        };
+    }
+  },
+  getStateTags: (enemy) => {
+    switch (enemy.cycleIndex % 5) {
+      case 0:
+        return ["hidden"];
+      case 1:
+        return ["aiming"];
+      case 2:
+        return ["firing"];
+      case 3:
+        return ["exposed"];
+      default:
+        return ["repositioning"];
+    }
+  },
+  act: (state, enemy, emit) => {
+    switch (enemy.cycleIndex % 5) {
+      case 0:
+        emitLog(emit, "Hex Slinger fades behind a heat shimmer.");
+        break;
+      case 1:
+        emitLog(emit, "Hex Slinger traces a glowing sightline across your chest.");
+        break;
+      case 2:
+        stripPlayerGuard(state, 4, emit, "Hex Bolt");
+        damagePlayer(state, 5, "Hex Bolt", emit);
+        break;
+      case 3:
+        emitLog(emit, "Hex Slinger manifests fully for a heartbeat.");
+        break;
+      default:
+        emitLog(emit, "Hex Slinger drifts to a fresh firing angle.");
+        break;
+    }
+
+    enemy.cycleIndex = (enemy.cycleIndex + 1) % 5;
+  },
+};
+
 const tankDef: EnemyDef<TankState> = {
   id: "tank",
   label: "A FUCKING TANK",
-  description: "A heavily armored tank-like boss with a devastating cannon. Forces strategic ammo use and timing.",
+  description:
+    "A heavily armored tank-like boss with a devastating cannon. Forces strategic ammo use and timing.",
+  categoryTags: ["robotic"],
+  traitTags: ["boss", "armor", "ranged"],
   createState: () => ({
     id: "tank",
     label: "A FUCKING TANK",
@@ -413,8 +712,8 @@ const tankDef: EnemyDef<TankState> = {
         };
     }
   },
-  getTags: (enemy) => {
-    const tags: EnemyTag[] = [];
+  getStateTags: (enemy) => {
+    const tags: EnemyStateTag[] = [];
     if (enemy.cycleIndex % 4 === 0) {
       tags.push("armored", "fortified");
     }
@@ -429,32 +728,31 @@ const tankDef: EnemyDef<TankState> = {
     }
     return tags;
   },
-  onTurnStart: (state, enemy, emit) => {
-    // Set armor based on state
+  onTurnStart: (_state, enemy, emit) => {
     if (enemy.cycleIndex % 4 === 0) {
-      enemy.armor = 8; // High armor when fortified
-      emitLog(emit, enemy.label + enemy.label + " braces behind reinforced armor.");
+      enemy.armor = 8;
+      emitLog(emit, `${enemy.label} braces behind reinforced armor.`);
     } else if (enemy.cycleIndex % 4 === 3) {
-      enemy.armor = 0; // No armor when exposed
-      emitLog(emit, enemy.label + enemy.label + " is exposed!");
+      enemy.armor = 0;
+      emitLog(emit, `${enemy.label} is exposed.`);
     } else {
-      enemy.armor = 4; // Moderate armor otherwise
+      enemy.armor = 4;
     }
   },
   act: (state, enemy, emit) => {
     switch (enemy.cycleIndex % 4) {
       case 0:
-        emitLog(emit, enemy.label + enemy.label + " reinforces its armor plating.");
+        emitLog(emit, `${enemy.label} reinforces its armor plating.`);
         break;
       case 1:
-        emitLog(emit, enemy.label + "The cannon locks on.");
+        emitLog(emit, `${enemy.label} locks the cannon on target.`);
         break;
       case 2:
         damagePlayer(state, 10, "Cannon Blast", emit);
         break;
       default:
-        emitLog(emit, enemy.label + enemy.label + " vents heat and repositions.");
-        enemy.tracksDamaged = Math.max(0, enemy.tracksDamaged - 1); // Tracks heal over time
+        emitLog(emit, `${enemy.label} vents heat and repositions.`);
+        enemy.tracksDamaged = Math.max(0, enemy.tracksDamaged - 1);
         break;
     }
 
@@ -466,6 +764,8 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
   id: "phantom_gunman",
   label: "Phantom Gunman",
   description: "A fast duelist that takes cover and strikes from the shadows. Patience and timing are key.",
+  categoryTags: ["supernatural"],
+  traitTags: ["boss", "evasive", "ranged", "elite"],
   createState: () => ({
     id: "phantom_gunman",
     label: "Phantom Gunman",
@@ -520,8 +820,8 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
         };
     }
   },
-  getTags: (enemy) => {
-    const tags: EnemyTag[] = [];
+  getStateTags: (enemy) => {
+    const tags: EnemyStateTag[] = [];
     switch (enemy.cycleIndex % 5) {
       case 0:
         tags.push("hidden");
@@ -550,7 +850,7 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
         emitLog(emit, "Phantom takes aim.");
         break;
       case 2:
-        emitLog(emit, "Phantom is exposed!");
+        emitLog(emit, "Phantom is exposed.");
         break;
       case 3:
         damagePlayer(state, 12, "Phantom Shot", emit);
@@ -564,57 +864,65 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
   },
 };
 
-const NON_BOSS_ENEMIES: EnemyId[] = ["rat_swarm", "riot_droid", "sniper", "drone"];
+const NON_BOSS_ENEMIES: EnemyId[] = [
+  "rat_swarm",
+  "riot_droid",
+  "sniper",
+  "drone",
+  "mauler_hound",
+  "field_medic",
+  "hex_slinger",
+];
 const BOSS_ENEMIES: EnemyId[] = ["tank", "phantom_gunman"];
+
+type EnemyDefMap = {
+  rat_swarm: EnemyDef<RatSwarmState>;
+  riot_droid: EnemyDef<RiotDroidState>;
+  sniper: EnemyDef<SniperState>;
+  drone: EnemyDef<DroneState>;
+  mauler_hound: EnemyDef<MaulerHoundState>;
+  field_medic: EnemyDef<FieldMedicState>;
+  hex_slinger: EnemyDef<HexSlingerState>;
+  tank: EnemyDef<TankState>;
+  phantom_gunman: EnemyDef<PhantomGunmanState>;
+};
+
+const ENEMY_DEFS: EnemyDefMap = {
+  rat_swarm: ratSwarmDef,
+  riot_droid: riotDroidDef,
+  sniper: sniperDef,
+  drone: droneDef,
+  mauler_hound: maulerHoundDef,
+  field_medic: fieldMedicDef,
+  hex_slinger: hexSlingerDef,
+  tank: tankDef,
+  phantom_gunman: phantomGunmanDef,
+};
+
+export const ENEMY_IDS: readonly EnemyId[] = [...NON_BOSS_ENEMIES, ...BOSS_ENEMIES];
 
 export const ENEMY_ORDER: EnemyId[] = (() => {
   const order = [...NON_BOSS_ENEMIES];
   const boss = BOSS_ENEMIES[(Math.random() * BOSS_ENEMIES.length) | 0] ?? BOSS_ENEMIES[0];
 
-  for (let i = order.length - 1; i > 0; i -= 1) {
-    const j = (Math.random() * (i + 1)) | 0;
-    [order[i], order[j]] = [order[j], order[i]];
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    const swapIndex = (Math.random() * (index + 1)) | 0;
+    [order[index], order[swapIndex]] = [order[swapIndex], order[index]];
   }
 
   order.push(boss);
   return order;
 })();
 
-export const createEnemyState = (enemyId: EnemyId): EnemyState => {
-  switch (enemyId) {
-    case "rat_swarm":
-      return ratSwarmDef.createState();
-    case "riot_droid":
-      return riotDroidDef.createState();
-    case "sniper":
-      return sniperDef.createState();
-    case "drone":
-      return droneDef.createState();
-    case "tank":
-      return tankDef.createState();
-    case "phantom_gunman":
-      return phantomGunmanDef.createState();
-  }
-};
+export const createEnemyState = (enemyId: EnemyId): EnemyState => ENEMY_DEFS[enemyId].createState();
 
-export const getEnemyDef = <TEnemy extends EnemyState>(enemy: TEnemy): EnemyDef<TEnemy> => {
-  switch (enemy.id) {
-    case "rat_swarm":
-      return ratSwarmDef as unknown as EnemyDef<TEnemy>;
-    case "riot_droid":
-      return riotDroidDef as unknown as EnemyDef<TEnemy>;
-    case "sniper":
-      return sniperDef as unknown as EnemyDef<TEnemy>;
-    case "drone":
-      return droneDef as unknown as EnemyDef<TEnemy>;
-    case "tank":
-      return tankDef as unknown as EnemyDef<TEnemy>;
-    case "phantom_gunman":
-      return phantomGunmanDef as unknown as EnemyDef<TEnemy>;
-  }
-};
+export const getEnemyDef = <TEnemy extends EnemyState>(enemy: TEnemy): EnemyDef<TEnemy> =>
+  ENEMY_DEFS[enemy.id] as unknown as EnemyDef<TEnemy>;
 
-export const getEnemyIntent = (enemy: EnemyState): EnemyIntentView =>
-  getEnemyDef(enemy).getIntent(enemy);
+export const getEnemyIntent = (enemy: EnemyState): EnemyIntentView => getEnemyDef(enemy).getIntent(enemy);
 
-export const getEnemyTags = (enemy: EnemyState): EnemyTag[] => getEnemyDef(enemy).getTags(enemy);
+export const getEnemyStateTags = (enemy: EnemyState): EnemyStateTag[] => getEnemyDef(enemy).getStateTags(enemy);
+
+export const getEnemyCategoryTags = (enemy: EnemyState) => [...getEnemyDef(enemy).categoryTags];
+
+export const getEnemyTraitTags = (enemy: EnemyState) => [...getEnemyDef(enemy).traitTags];

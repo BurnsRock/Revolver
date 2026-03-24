@@ -19,6 +19,9 @@ const UI_TEXTURE_KEYS = {
   riot_droid: "ui-riot-droid",
   sniper: "ui-sniper",
   drone: "ui-drone",
+  mauler_hound: "ui-mauler-hound",
+  field_medic: "ui-field-medic",
+  hex_slinger: "ui-hex-slinger",
   tank: "ui-tank",
   phantom_gunman: "ui-phantom-gunman",
   basic: "ui-basic",
@@ -129,6 +132,9 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   riot_droid: 16,
   sniper: 14,
   drone: 18,
+  mauler_hound: 17,
+  field_medic: 16,
+  hex_slinger: 20,
   tank: 25,
   phantom_gunman: 22,
 };
@@ -137,6 +143,9 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   riot_droid: UI_TEXTURE_KEYS.riot_droid,
   sniper: UI_TEXTURE_KEYS.sniper,
   drone: UI_TEXTURE_KEYS.drone,
+  mauler_hound: UI_TEXTURE_KEYS.mauler_hound,
+  field_medic: UI_TEXTURE_KEYS.field_medic,
+  hex_slinger: UI_TEXTURE_KEYS.hex_slinger,
   tank: UI_TEXTURE_KEYS.tank,
   phantom_gunman: UI_TEXTURE_KEYS.phantom_gunman,
 };
@@ -146,8 +155,11 @@ const ratSwarmImageUrl = new URL("../assets/images/initial/RAT SWARM.PNG", impor
 const riotDroidImageUrl = new URL("../assets/images/initial/RIOT DROID.PNG", import.meta.url).href;
 const sniperImageUrl = new URL("../assets/images/initial/SNIPER.PNG", import.meta.url).href;
 const droneImageUrl = new URL("../assets/images/initial/DRONE.PNG", import.meta.url).href;
+const maulerHoundImageUrl = new URL("../assets/images/initial/RAT STORM.PNG", import.meta.url).href;
+const fieldMedicImageUrl = sniperImageUrl;
 const tankImageUrl = new URL("../assets/images/initial/TANK.PNG", import.meta.url).href;
 const phantomGunmanImageUrl = new URL("../assets/images/initial/PHANTOM GUNMAN.PNG", import.meta.url).href;
+const hexSlingerImageUrl = phantomGunmanImageUrl;
 
 const basicImageUrl = new URL("../assets/images/initial/Basic.PNG", import.meta.url).href;
 const birdshotImageUrl = new URL("../assets/images/initial/Birdshot.PNG", import.meta.url).href;
@@ -282,6 +294,9 @@ export class CombatScene extends Phaser.Scene {
     this.load.image(UI_TEXTURE_KEYS.riot_droid, riotDroidImageUrl);
     this.load.image(UI_TEXTURE_KEYS.sniper, sniperImageUrl);
     this.load.image(UI_TEXTURE_KEYS.drone, droneImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.mauler_hound, maulerHoundImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.field_medic, fieldMedicImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.hex_slinger, hexSlingerImageUrl);
     this.load.image(UI_TEXTURE_KEYS.tank, tankImageUrl);
     this.load.image(UI_TEXTURE_KEYS.phantom_gunman, phantomGunmanImageUrl);
 
@@ -846,6 +861,21 @@ export class CombatScene extends Phaser.Scene {
     keyboard.on("keydown-FOUR", () => {
       if (this.session.getMode() !== "shop") {
         this.startEncounter("drone");
+      }
+    });
+    keyboard.on("keydown-FIVE", () => {
+      if (this.session.getMode() !== "shop") {
+        this.startEncounter("mauler_hound");
+      }
+    });
+    keyboard.on("keydown-SIX", () => {
+      if (this.session.getMode() !== "shop") {
+        this.startEncounter("field_medic");
+      }
+    });
+    keyboard.on("keydown-SEVEN", () => {
+      if (this.session.getMode() !== "shop") {
+        this.startEncounter("hex_slinger");
       }
     });
 
