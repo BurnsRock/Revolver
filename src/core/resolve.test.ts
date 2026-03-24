@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { STARTER_LOADOUT, getLoadout } from "./content/bullets";
 import {
   createEmptyCylinder,
   fireCurrentRound,
@@ -93,7 +94,7 @@ describe("combat matchups", () => {
 
     const result = stepCombat(state, "rotate");
 
-    expect(result.state.player.guard).toBe(1);
+    expect(result.state.player.guard).toBe(5);
   });
 
   it("basic bullet deals standard damage", () => {
@@ -105,6 +106,63 @@ describe("combat matchups", () => {
       throw new Error("Expected riot droid result.");
     }
     expect(result.state.enemy.hp).toBe(droidState.enemy.hp - 3);
+  });
+
+  it("starter loadout includes hollow point and frangible without accessories", () => {
+    expect(STARTER_LOADOUT).toContain("hollow_point");
+    expect(STARTER_LOADOUT).toContain("frangible");
+    expect(getLoadout([])).toEqual(STARTER_LOADOUT);
+  });
+
+  it("hollow point spikes exposed targets and underperforms into armor", () => {
+    const exposedBase = createCombatState(15, "drone");
+    exposedBase.enemy.cycleIndex = 3;
+
+    const hollowExposed = stepCombat(withBulletReady(exposedBase, "hollow_point"), "fire");
+    const basicExposed = stepCombat(withBulletReady(exposedBase, "basic"), "fire");
+
+    const exposedHollowDamage = exposedBase.enemy.hp - hollowExposed.state.enemy.hp;
+    const exposedBasicDamage = exposedBase.enemy.hp - basicExposed.state.enemy.hp;
+
+    expect(exposedHollowDamage).toBeGreaterThan(exposedBasicDamage);
+
+    const armoredBase = createCombatState(16, "riot_droid");
+    armoredBase.enemy.armor = 1;
+    armoredBase.enemy.cycleIndex = 1;
+
+    const hollowArmored = stepCombat(withBulletReady(armoredBase, "hollow_point"), "fire");
+    const basicArmored = stepCombat(withBulletReady(armoredBase, "basic"), "fire");
+
+    const armoredHollowDamage = armoredBase.enemy.hp - hollowArmored.state.enemy.hp;
+    const armoredBasicDamage = armoredBase.enemy.hp - basicArmored.state.enemy.hp;
+
+    expect(armoredHollowDamage).toBeLessThan(armoredBasicDamage);
+  });
+
+  it("frangible trades damage for guard and clears swarms efficiently", () => {
+    const droneBase = createCombatState(17, "drone");
+    const frangibleVsDrone = stepCombat(withBulletReady(droneBase, "frangible"), "fire");
+    const basicVsDrone = stepCombat(withBulletReady(droneBase, "basic"), "fire");
+
+    const frangibleDamage = droneBase.enemy.hp - frangibleVsDrone.state.enemy.hp;
+    const basicDamage = droneBase.enemy.hp - basicVsDrone.state.enemy.hp;
+
+    expect(frangibleDamage).toBeLessThan(basicDamage);
+    expect(frangibleVsDrone.state.player.guard).toBe(2);
+
+    const swarmBase = createCombatState(18, "rat_swarm");
+    const frangibleVsSwarm = stepCombat(withBulletReady(swarmBase, "frangible"), "fire");
+
+    expect(frangibleVsSwarm.state.enemy.id).toBe("rat_swarm");
+    if (frangibleVsSwarm.state.enemy.id !== "rat_swarm") {
+      throw new Error("Expected rat swarm result.");
+    }
+    expect(frangibleVsSwarm.state.enemy.stacks).toBe(2);
+    expect(
+      frangibleVsSwarm.events.some(
+        (event) => event.type === "guard_gained" && event.amount === 2 && event.total === 2,
+      ),
+    ).toBe(true);
   });
 
   it("rifle mod increases flechette shred on riot droid", () => {

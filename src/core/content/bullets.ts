@@ -1,28 +1,9 @@
 import type { AccessoryId, BulletDef, BulletType } from "../types";
 import { ACCESSORY_DEFS } from "./accessories";
 
-export const STARTER_LOADOUT: BulletType[] = [
-  "basic",
-  "basic",
-  "basic",
-  "basic",
-  "basic",
-  "blank",
-];
+const BASE_UNLOCKED_BULLETS: readonly BulletType[] = ["basic", "blank", "hollow_point", "frangible"];
 
-export const getLoadout = (
-  ownedAccessories: readonly AccessoryId[],
-): BulletType[] => {
-  const unlockedBullets = new Set<BulletType>(["basic", "blank"]);
-  for (const accessoryId of ownedAccessories) {
-    const def = ACCESSORY_DEFS[accessoryId];
-    if (def.unlocks) {
-      for (const bullet of def.unlocks) {
-        unlockedBullets.add(bullet);
-      }
-    }
-  }
-  // For each unlocked bullet, add 2 copies, except basic and blank which have more
+const buildLoadout = (unlockedBullets: Iterable<BulletType>): BulletType[] => {
   const loadout: BulletType[] = [];
   for (const bullet of unlockedBullets) {
     if (bullet === "basic") {
@@ -36,6 +17,23 @@ export const getLoadout = (
   return loadout;
 };
 
+export const STARTER_LOADOUT: BulletType[] = buildLoadout(BASE_UNLOCKED_BULLETS);
+
+export const getLoadout = (
+  ownedAccessories: readonly AccessoryId[],
+): BulletType[] => {
+  const unlockedBullets = new Set<BulletType>(BASE_UNLOCKED_BULLETS);
+  for (const accessoryId of ownedAccessories) {
+    const def = ACCESSORY_DEFS[accessoryId];
+    if (def.unlocks) {
+      for (const bullet of def.unlocks) {
+        unlockedBullets.add(bullet);
+      }
+    }
+  }
+  return buildLoadout(unlockedBullets);
+};
+
 export const BULLET_DEFS: Record<BulletType, BulletDef> = {
   basic: {
     id: "basic",
@@ -43,6 +41,20 @@ export const BULLET_DEFS: Record<BulletType, BulletDef> = {
     shortLabel: "BSC",
     description: "Standard issue round. Reliable and consistent.",
     matchup: "No bonuses or penalties.",
+  },
+  hollow_point: {
+    id: "hollow_point",
+    label: "Hollow Point",
+    shortLabel: "HLP",
+    description: "Expands hard in soft tissue but crumples against heavy plating.",
+    matchup: "Best into exposed targets. Poor into armor.",
+  },
+  frangible: {
+    id: "frangible",
+    label: "Frangible",
+    shortLabel: "FRG",
+    description: "Light composite round that sheds into crowds and leaves you a little safer.",
+    matchup: "Best into swarms. Lower direct damage, but grants a bit of guard.",
   },
   birdshot: {
     id: "birdshot",

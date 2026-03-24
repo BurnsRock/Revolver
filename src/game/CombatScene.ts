@@ -22,6 +22,8 @@ const UI_TEXTURE_KEYS = {
   tank: "ui-tank",
   phantom_gunman: "ui-phantom-gunman",
   basic: "ui-basic",
+  hollow_point: "ui-hollow-point",
+  frangible: "ui-frangible",
   birdshot: "ui-birdshot",
   buckshot: "ui-buckshot",
   slug: "ui-slug",
@@ -49,6 +51,16 @@ const BULLET_TOOLTIP_LINES = {
     damage: "3",
     effect: "Standard damage",
     effectiveVs: "General purpose",
+  },
+  hollow_point: {
+    damage: "3, 5 on exposed, 1 vs armor",
+    effect: "Punishes exposed targets but blunts on plating",
+    effectiveVs: "Exposed or unarmored targets",
+  },
+  frangible: {
+    damage: "2, or 4 stacks vs swarm",
+    effect: "Clears swarms and grants 2 guard",
+    effectiveVs: "Swarms or chip defense",
   },
   birdshot: {
     damage: "2, or 3 stacks vs swarm",
@@ -150,8 +162,12 @@ const seedImageUrl = new URL("../assets/images/initial/Seed.PNG", import.meta.ur
 const porkImageUrl = new URL("../assets/images/initial/Pork.PNG", import.meta.url).href;
 const flareImageUrl = new URL("../assets/images/initial/Flare.PNG", import.meta.url).href;
 const explosiveImageUrl = new URL("../assets/images/initial/Explosive.PNG", import.meta.url).href;
+const hollowPointImageUrl = basicImageUrl;
+const frangibleImageUrl = birdshotImageUrl;
 const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
   basic: UI_TEXTURE_KEYS.basic,
+  hollow_point: UI_TEXTURE_KEYS.hollow_point,
+  frangible: UI_TEXTURE_KEYS.frangible,
   birdshot: UI_TEXTURE_KEYS.birdshot,
   buckshot: UI_TEXTURE_KEYS.buckshot,
   slug: UI_TEXTURE_KEYS.slug,
@@ -270,6 +286,8 @@ export class CombatScene extends Phaser.Scene {
     this.load.image(UI_TEXTURE_KEYS.phantom_gunman, phantomGunmanImageUrl);
 
     this.load.image(UI_TEXTURE_KEYS.basic, basicImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.hollow_point, hollowPointImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.frangible, frangibleImageUrl);
     this.load.image(UI_TEXTURE_KEYS.birdshot, birdshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.buckshot, buckshotImageUrl);
     this.load.image(UI_TEXTURE_KEYS.slug, slugImageUrl);

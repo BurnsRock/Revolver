@@ -34,6 +34,8 @@
 
 
 ## Bullet Ideas
+- frag hollow
+- hollow point
 - explosive shell
 - seed bullet
 - pork (institutionalized 2014) - inflicts poison/infection

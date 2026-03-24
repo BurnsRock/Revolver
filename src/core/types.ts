@@ -4,6 +4,8 @@ export type PlayerAction = "fire" | "rotate" | "spin" | "reload";
 
 export type BulletType =
   | "basic"
+  | "hollow_point"
+  | "frangible"
   | "birdshot"
   | "buckshot"
   | "slug"

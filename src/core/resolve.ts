@@ -247,6 +247,35 @@ const applyBasic = (state: CombatState, comboBonus: number, events: CombatEvent[
   damageEnemy(state, 3 + comboBonus, "Revolver Round", events);
 };
 
+const applyHollowPoint = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  const tags = getEnemyTags(state.enemy);
+  if (hasArmor(state.enemy) || tags.includes("armored") || tags.includes("shielded")) {
+    damageEnemy(state, 1 + comboBonus, "Hollow Point", events);
+    emitLog(events, "Hollow Point flattens against armor.");
+    return;
+  }
+
+  if (tags.includes("exposed")) {
+    damageEnemy(state, 5 + comboBonus, "Hollow Point", events);
+    emitLog(events, "Hollow Point tears through the exposed weak point.");
+    return;
+  }
+
+  damageEnemy(state, 3 + comboBonus, "Hollow Point", events);
+};
+
+const applyFrangible = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
+  if (state.enemy.id === "rat_swarm") {
+    removeSwarmStacks(state.enemy, 4 + comboBonus, events, "Frangible");
+    grantGuard(state, 2, events, "Frangible");
+    emitLog(events, "Frangible bursts through the front ranks and keeps you covered.");
+    return;
+  }
+
+  damageEnemy(state, 2 + comboBonus, "Frangible", events);
+  grantGuard(state, 2, events, "Frangible");
+};
+
 const applyTranq = (state: CombatState, comboBonus: number, events: CombatEvent[]): void => {
   damageEnemy(state, 1 + comboBonus, "Tranq Dart", events);
   state.enemy.stun = (state.enemy.stun ?? 0) + 1;
@@ -444,6 +473,12 @@ const resolveBullet = (
   switch (bullet) {
     case "basic":
       applyBasic(state, comboBonus, events);
+      break;
+    case "hollow_point":
+      applyHollowPoint(state, comboBonus, events);
+      break;
+    case "frangible":
+      applyFrangible(state, comboBonus, events);
       break;
     case "birdshot":
       applyBirdshot(state, comboBonus, events);

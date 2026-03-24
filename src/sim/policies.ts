@@ -31,6 +31,22 @@ const scoreBullet = (state: CombatState, bullet: BulletType): number => {
   switch (bullet) {
     case "basic":
       return 3; // Standard damage
+    case "hollow_point":
+      if (tags.has("exposed")) {
+        return 7.5;
+      }
+      if (tags.has("armored") || tags.has("shielded")) {
+        return 1;
+      }
+      return 3.5;
+    case "frangible":
+      if (state.enemy.id === "rat_swarm") {
+        return 8;
+      }
+      if (incomingDamage >= 8) {
+        return 3;
+      }
+      return 2.5;
     case "birdshot":
       if (state.enemy.id === "rat_swarm") {
         return 9;
