@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Rogue Revolver app icon</title>
+  <desc id="desc">A silver revolver with a glowing chamber and golden motion trails on a dark rounded square background.</desc>
+  <defs>
+    <linearGradient id="panel" x1="120" y1="120" x2="904" y2="904" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#231712" />
+      <stop offset="0.45" stop-color="#100b09" />
+      <stop offset="1" stop-color="#050506" />
+    </linearGradient>
+    <radialGradient id="panelGlow" cx="0.42" cy="0.34" r="0.8">
+      <stop offset="0" stop-color="#2b2019" stop-opacity="0.75" />
+      <stop offset="0.55" stop-color="#09080a" stop-opacity="0.14" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0.75" />
+    </radialGradient>
+    <linearGradient id="steel" x1="180" y1="240" x2="870" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2b2320" />
+      <stop offset="0.14" stop-color="#faf5ed" />
+      <stop offset="0.3" stop-color="#897567" />
+      <stop offset="0.48" stop-color="#fffefa" />
+      <stop offset="0.64" stop-color="#625349" />
+      <stop offset="0.82" stop-color="#d8ccbe" />
+      <stop offset="1" stop-color="#2c231f" />
+    </linearGradient>
+    <linearGradient id="steelDark" x1="250" y1="250" x2="540" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#181517" />
+      <stop offset="0.35" stop-color="#a18f80" />
+      <stop offset="0.62" stop-color="#302a2c" />
+      <stop offset="1" stop-color="#0e0d11" />
+    </linearGradient>
+    <linearGradient id="steelEdge" x1="270" y1="500" x2="880" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#473933" />
+      <stop offset="0.18" stop-color="#e5d9cc" />
+      <stop offset="0.5" stop-color="#726155" />
+      <stop offset="0.76" stop-color="#f9f2e8" />
+      <stop offset="1" stop-color="#41352f" />
+    </linearGradient>
+    <linearGradient id="wood" x1="110" y1="430" x2="280" y2="750" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#24110a" />
+      <stop offset="0.32" stop-color="#6d3c17" />
+      <stop offset="0.55" stop-color="#8c5520" />
+      <stop offset="1" stop-color="#24110a" />
+    </linearGradient>
+    <linearGradient id="gold" x1="96" y1="818" x2="756" y2="634" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8e3400" />
+      <stop offset="0.28" stop-color="#ff9e12" />
+      <stop offset="0.56" stop-color="#ffd65f" />
+      <stop offset="0.78" stop-color="#fff0b0" />
+      <stop offset="1" stop-color="#ff9e12" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff8cf" />
+      <stop offset="0.22" stop-color="#ffe26f" />
+      <stop offset="0.5" stop-color="#ffae1a" />
+      <stop offset="0.8" stop-color="#d66200" />
+      <stop offset="1" stop-color="#d66200" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect x="52" y="52" width="920" height="920" rx="196" fill="#000000" opacity="0.35" />
+  <rect x="44" y="44" width="936" height="936" rx="200" fill="url(#panel)" />
+  <rect x="44" y="44" width="936" height="936" rx="200" fill="url(#panelGlow)" />
+
+  <g opacity="0.8">
+    <path d="M108 768 C 232 916, 494 946, 740 816" fill="none" stroke="#6a2500" stroke-linecap="round" stroke-width="128" opacity="0.32" />
+    <path d="M108 768 C 232 916, 494 946, 740 816" fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-width="74" />
+    <path d="M108 768 C 232 916, 494 946, 740 816" fill="none" stroke="#fff2b2" stroke-linecap="round" stroke-width="18" opacity="0.52" />
+    <path d="M164 626 C 64 712, 116 850, 302 878" fill="none" stroke="#6a2500" stroke-linecap="round" stroke-width="92" opacity="0.28" />
+    <path d="M164 626 C 64 712, 116 850, 302 878" fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-width="48" />
+    <path d="M164 626 C 64 712, 116 850, 302 878" fill="none" stroke="#fff1aa" stroke-linecap="round" stroke-width="12" opacity="0.48" />
+  </g>
+
+  <g opacity="0.9">
+    <path d="M634 188 C 734 148, 832 146, 924 174" fill="none" stroke="#ff9c12" stroke-linecap="round" stroke-width="9" opacity="0.52" />
+    <path d="M698 150 C 782 124, 864 126, 940 150" fill="none" stroke="#ffd975" stroke-linecap="round" stroke-width="5" opacity="0.45" />
+    <circle cx="660" cy="128" r="5" fill="#ffb72b" />
+    <circle cx="734" cy="186" r="4" fill="#ffb72b" />
+    <circle cx="886" cy="130" r="4" fill="#ffb72b" />
+    <circle cx="776" cy="232" r="3" fill="#ffb72b" />
+    <circle cx="874" cy="216" r="3" fill="#ffb72b" />
+  </g>
+
+  <g transform="translate(148 126) rotate(24 360 332)">
+    <g opacity="0.26">
+      <rect x="470" y="146" width="366" height="150" rx="58" fill="#000000" />
+      <rect x="552" y="404" width="282" height="138" rx="46" fill="#000000" />
+      <rect x="332" y="226" width="250" height="292" rx="82" fill="#000000" />
+      <circle cx="416" cy="378" r="156" fill="#000000" />
+      <path d="M126 398 C 54 454 42 620 142 760 L 262 834 C 336 748 360 644 350 520 C 342 430 300 372 220 338 Z" fill="#000000" />
+    </g>
+
+    <path d="M126 386 C 48 452 38 628 146 772 L 278 846 C 354 756 380 646 372 516 C 364 424 316 358 226 322 Z" fill="url(#steelEdge)" />
+    <path d="M162 428 C 116 484 118 614 196 734 L 264 788 C 314 708 332 626 324 534 C 318 470 286 414 226 382 Z" fill="url(#wood)" />
+    <path d="M182 468 C 158 520 166 608 224 692" fill="none" stroke="#c08a49" stroke-linecap="round" stroke-width="10" opacity="0.45" />
+
+    <path d="M210 324 C 266 252 356 216 452 214 L 578 226 L 566 344 L 320 420 L 176 416 Z" fill="url(#steelEdge)" />
+    <path d="M282 276 L 566 286" fill="none" stroke="#fffdf8" stroke-linecap="round" stroke-width="14" opacity="0.34" />
+
+    <rect x="470" y="134" width="392" height="156" rx="58" fill="url(#steel)" />
+    <rect x="490" y="160" width="352" height="28" rx="14" fill="#fffef7" opacity="0.56" />
+    <rect x="530" y="408" width="336" height="136" rx="48" fill="url(#steel)" />
+    <rect x="564" y="432" width="284" height="22" rx="11" fill="#fffef7" opacity="0.3" />
+
+    <rect x="326" y="220" width="254" height="294" rx="82" fill="url(#steel)" />
+    <rect x="352" y="244" width="204" height="36" rx="18" fill="#fffef7" opacity="0.38" />
+
+    <circle cx="416" cy="378" r="156" fill="url(#steelDark)" stroke="#c98b39" stroke-width="8" />
+    <circle cx="416" cy="378" r="142" fill="none" stroke="#f4ede0" stroke-width="6" opacity="0.45" />
+
+    <circle cx="360" cy="296" r="40" fill="#0a090d" stroke="#7a654f" stroke-width="8" />
+    <circle cx="458" cy="296" r="42" fill="#1b110d" stroke="#a27334" stroke-width="8" />
+    <circle cx="512" cy="384" r="40" fill="#06070b" stroke="#75614b" stroke-width="8" />
+    <circle cx="462" cy="472" r="40" fill="#08090d" stroke="#75614b" stroke-width="8" />
+    <circle cx="364" cy="474" r="40" fill="#08090d" stroke="#75614b" stroke-width="8" />
+    <circle cx="310" cy="386" r="40" fill="#06070b" stroke="#75614b" stroke-width="8" />
+
+    <circle cx="458" cy="296" r="78" fill="url(#glow)" />
+    <circle cx="458" cy="296" r="22" fill="#fff6cf" />
+    <circle cx="416" cy="378" r="38" fill="#c9871e" stroke="#ffdf86" stroke-width="8" />
+    <circle cx="416" cy="378" r="10" fill="#fff4bf" />
+
+    <circle cx="514" cy="304" r="8" fill="#846a52" />
+    <circle cx="514" cy="456" r="8" fill="#846a52" />
+    <circle cx="318" cy="498" r="8" fill="#846a52" />
+    <circle cx="260" cy="354" r="8" fill="#846a52" />
+    <circle cx="354" cy="246" r="8" fill="#846a52" />
+
+    <path d="M382 210 L 490 156 L 518 196 L 410 252 Z" fill="url(#steelEdge)" />
+    <path d="M514 150 L 842 148" fill="none" stroke="#fffdf7" stroke-linecap="round" stroke-width="10" opacity="0.4" />
+    <path d="M544 452 L 854 448" fill="none" stroke="#ff9a18" stroke-linecap="round" stroke-width="20" opacity="0.28" />
+  </g>
+</svg>

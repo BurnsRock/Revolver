@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Rogue Revolver favicon</title>
+  <desc id="desc">A simplified revolver cylinder with a glowing chamber and golden motion trail.</desc>
+  <defs>
+    <linearGradient id="bg" x1="24" y1="24" x2="232" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#231712" />
+      <stop offset="0.5" stop-color="#100b09" />
+      <stop offset="1" stop-color="#050506" />
+    </linearGradient>
+    <linearGradient id="steel" x1="54" y1="54" x2="206" y2="182" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2c241f" />
+      <stop offset="0.18" stop-color="#fbf6ee" />
+      <stop offset="0.42" stop-color="#8c7869" />
+      <stop offset="0.62" stop-color="#fffefa" />
+      <stop offset="0.84" stop-color="#5c4d43" />
+      <stop offset="1" stop-color="#2d241f" />
+    </linearGradient>
+    <linearGradient id="gold" x1="28" y1="196" x2="214" y2="142" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8f3500" />
+      <stop offset="0.35" stop-color="#ffa31a" />
+      <stop offset="0.72" stop-color="#fff0b0" />
+      <stop offset="1" stop-color="#ffab1f" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff7cb" />
+      <stop offset="0.32" stop-color="#ffe46a" />
+      <stop offset="0.62" stop-color="#ffae1f" />
+      <stop offset="1" stop-color="#d45f00" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect x="12" y="12" width="232" height="232" rx="54" fill="#000000" opacity="0.32" />
+  <rect x="10" y="10" width="236" height="236" rx="56" fill="url(#bg)" />
+
+  <path d="M32 188 C 64 226, 134 234, 216 182" fill="none" stroke="#672300" stroke-linecap="round" stroke-width="34" opacity="0.3" />
+  <path d="M32 188 C 64 226, 134 234, 216 182" fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-width="20" />
+  <path d="M32 188 C 64 226, 134 234, 216 182" fill="none" stroke="#fff1ac" stroke-linecap="round" stroke-width="5" opacity="0.52" />
+
+  <g transform="translate(30 22) rotate(20 98 98)">
+    <rect x="112" y="26" width="96" height="40" rx="16" fill="url(#steel)" />
+    <rect x="78" y="112" width="132" height="34" rx="14" fill="url(#steel)" />
+    <rect x="68" y="56" width="66" height="84" rx="24" fill="url(#steel)" />
+    <circle cx="92" cy="98" r="54" fill="#121216" stroke="#c88b3d" stroke-width="3" />
+    <circle cx="72" cy="70" r="14" fill="#09090d" stroke="#7c6852" stroke-width="3" />
+    <circle cx="105" cy="69" r="14" fill="#1b120e" stroke="#a27233" stroke-width="3" />
+    <circle cx="123" cy="100" r="14" fill="#09090d" stroke="#7c6852" stroke-width="3" />
+    <circle cx="106" cy="130" r="14" fill="#09090d" stroke="#7c6852" stroke-width="3" />
+    <circle cx="73" cy="131" r="14" fill="#09090d" stroke="#7c6852" stroke-width="3" />
+    <circle cx="55" cy="99" r="14" fill="#09090d" stroke="#7c6852" stroke-width="3" />
+    <circle cx="105" cy="69" r="28" fill="url(#glow)" />
+    <circle cx="105" cy="69" r="8" fill="#fff6cc" />
+    <circle cx="92" cy="98" r="12" fill="#cb891d" stroke="#ffdf85" stroke-width="3" />
+    <circle cx="92" cy="98" r="3.5" fill="#fff4be" />
+  </g>
+</svg>
