@@ -186,6 +186,8 @@ export interface CombatState {
   heat: number;
   player: PlayerState;
   enemy: EnemyState;
+  enemies: EnemyState[];
+  selectedEnemyIndex: number;
   deck: DeckState;
   cylinder: CylinderState;
   accessories: AccessoryId[];

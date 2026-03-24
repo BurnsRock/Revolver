@@ -212,6 +212,11 @@ type ShopOptionVisual = {
   body: Phaser.GameObjects.Text;
 };
 
+type EnemyTargetVisual = {
+  box: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+};
+
 type UiSpriteSet = {
   player: Phaser.GameObjects.Image;
   enemy: Phaser.GameObjects.Image;
@@ -272,6 +277,7 @@ export class CombatScene extends Phaser.Scene {
   private readonly chamberVisuals: ChamberVisual[] = [];
   private readonly actionButtons = new Map<PlayerAction, ActionButton>();
   private readonly shopOptionVisuals: ShopOptionVisual[] = [];
+  private readonly enemyTargetVisuals: EnemyTargetVisual[] = [];
   private accessoryNameTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
@@ -419,6 +425,26 @@ export class CombatScene extends Phaser.Scene {
       lineSpacing: 4,
       wordWrap: { width: 300 },
     });
+
+    for (let index = 0; index < 3; index += 1) {
+      const y = 500 + index * 54;
+      const box = this.add.rectangle(950, y, 280, 44, 0x223246, 0.9);
+      box.setStrokeStyle(2, 0x5b6d82, 1);
+      box.setInteractive({ useHandCursor: true });
+      box.on("pointerdown", () => {
+        this.session.setSelectedEnemy(index);
+        this.refreshUi();
+      });
+
+      const label = this.add.text(820, y, "", {
+        fontFamily: "Trebuchet MS, sans-serif",
+        fontSize: "16px",
+        color: "#dbe7f4",
+      });
+      label.setOrigin(0, 0.5);
+
+      this.enemyTargetVisuals.push({ box, label });
+    }
 
     this.outcomeText = this.add.text(430, 104, "", {
       fontFamily: "Georgia, serif",
@@ -841,41 +867,41 @@ export class CombatScene extends Phaser.Scene {
       if (this.session.getMode() === "shop") {
         this.buyShopAccessory(0);
       } else {
-        this.startEncounter("rat_swarm");
+        this.startEncounter(["rat_swarm"]);
       }
     });
     keyboard.on("keydown-TWO", () => {
       if (this.session.getMode() === "shop") {
         this.buyShopAccessory(1);
       } else {
-        this.startEncounter("riot_droid");
+        this.startEncounter(["riot_droid"]);
       }
     });
     keyboard.on("keydown-THREE", () => {
       if (this.session.getMode() === "shop") {
         this.buyShopAccessory(2);
       } else {
-        this.startEncounter("sniper");
+        this.startEncounter(["sniper"]);
       }
     });
     keyboard.on("keydown-FOUR", () => {
       if (this.session.getMode() !== "shop") {
-        this.startEncounter("drone");
+        this.startEncounter(["drone"]);
       }
     });
     keyboard.on("keydown-FIVE", () => {
       if (this.session.getMode() !== "shop") {
-        this.startEncounter("mauler_hound");
+        this.startEncounter(["mauler_hound"]);
       }
     });
     keyboard.on("keydown-SIX", () => {
       if (this.session.getMode() !== "shop") {
-        this.startEncounter("field_medic");
+        this.startEncounter(["field_medic"]);
       }
     });
     keyboard.on("keydown-SEVEN", () => {
       if (this.session.getMode() !== "shop") {
-        this.startEncounter("hex_slinger");
+        this.startEncounter(["hex_slinger"]);
       }
     });
 
@@ -923,8 +949,8 @@ export class CombatScene extends Phaser.Scene {
     this.refreshUi();
   }
 
-  private startEncounter(enemyId: EnemyId): void {
-    this.session.startEncounter(enemyId);
+  private startEncounter(enemyIds: EnemyId[]): void {
+    this.session.startEncounter(enemyIds);
     this.syncEncounterVisualState();
     this.refreshUi();
   }
@@ -1091,9 +1117,10 @@ export class CombatScene extends Phaser.Scene {
 
   private getEnemySummary(): string {
     const state = this.session.getState();
+    const enemy = state.enemies[state.selectedEnemyIndex] ?? state.enemy;
     const lines = [
-      state.enemy.label.toUpperCase(),
-      `HP ${state.enemy.hp}/${state.enemy.maxHp}`,
+      enemy.label.toUpperCase(),
+      `HP ${enemy.hp}/${enemy.maxHp}`,
     ];
     return lines.join("\n");
   }
@@ -1369,7 +1396,8 @@ export class CombatScene extends Phaser.Scene {
   private refreshUi(): void {
     const state = this.session.getState();
     const mode = this.session.getMode();
-    const intent = getEnemyIntent(state.enemy);
+    const selectedEnemy = state.enemies[state.selectedEnemyIndex] ?? state.enemy;
+    const intent = getEnemyIntent(selectedEnemy);
     const nextLabel = this.session.getNextEncounterLabel() ?? "next combat";
     const shopVisible = mode === "shop";
     const mainMenuVisible = mode === "main_menu";
@@ -1377,7 +1405,7 @@ export class CombatScene extends Phaser.Scene {
     const victoryVisible = mode === "victory";
 
     this.moneyText.setText(`Credits $${this.session.getMoney()}`);
-    this.uiSprites.enemy.setTexture(ENEMY_TEXTURE_KEYS[state.enemy.id]);
+    this.uiSprites.enemy.setTexture(ENEMY_TEXTURE_KEYS[selectedEnemy.id]);
 
     this.playerText.setText(
       `PLAYER\nHP ${state.player.hp}/${state.player.maxHp}\nGuard ${state.player.guard}\nCombo +${state.combo}\nHeat ${state.heat}/6`,
@@ -1388,6 +1416,24 @@ export class CombatScene extends Phaser.Scene {
     this.enemyIntentDetailText.setText(
       `${this.toTitleCase(intent.label).toUpperCase()}\n(${this.getCompactIntentDetail(intent).toUpperCase()})`,
     );
+
+    this.enemyTargetVisuals.forEach((visual, index) => {
+      const enemy = state.enemies[index];
+      if (!enemy) {
+        visual.box.setVisible(false);
+        visual.label.setVisible(false);
+        return;
+      }
+      visual.box.setVisible(true);
+      visual.label.setVisible(true);
+      const selected = index === state.selectedEnemyIndex;
+      const down = enemy.hp <= 0 || (enemy.id === "rat_swarm" && "stacks" in enemy && enemy.stacks <= 0);
+      visual.box.setFillStyle(selected ? 0x8f6422 : 0x223246, selected ? 1 : 0.9);
+      visual.box.setStrokeStyle(2, selected ? 0xf1c66b : 0x5b6d82, 1);
+      visual.box.setAlpha(down ? 0.45 : 1);
+      visual.label.setText(`${selected ? "▶ " : ""}${enemy.label} ${enemy.hp}/${enemy.maxHp}`);
+      visual.label.setColor(down ? "#7f90a3" : selected ? "#fff6db" : "#dbe7f4");
+    });
 
     this.outcomeText.setText(
       state.over

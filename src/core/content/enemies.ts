@@ -864,16 +864,22 @@ const phantomGunmanDef: EnemyDef<PhantomGunmanState> = {
   },
 };
 
-const NON_BOSS_ENEMIES: EnemyId[] = [
+const EASY_ENEMIES: EnemyId[] = [
   "rat_swarm",
   "riot_droid",
   "sniper",
   "drone",
+];
+const HARD_ENEMIES: EnemyId[] = [
   "mauler_hound",
   "field_medic",
   "hex_slinger",
+  "riot_droid",
+  "drone",
 ];
 const BOSS_ENEMIES: EnemyId[] = ["tank", "phantom_gunman"];
+const PRE_BOSS_FLOOR_COUNT = 7;
+const EASY_FLOOR_COUNT = 5;
 
 type EnemyDefMap = {
   rat_swarm: EnemyDef<RatSwarmState>;
@@ -899,22 +905,57 @@ const ENEMY_DEFS: EnemyDefMap = {
   phantom_gunman: phantomGunmanDef,
 };
 
-export const ENEMY_IDS: readonly EnemyId[] = [...NON_BOSS_ENEMIES, ...BOSS_ENEMIES];
+const ENEMY_HP_SCALE = 0.82;
+const SWARM_STACK_SCALE = 0.84;
 
-export const ENEMY_ORDER: EnemyId[] = (() => {
-  const order = [...NON_BOSS_ENEMIES];
-  const boss = BOSS_ENEMIES[(Math.random() * BOSS_ENEMIES.length) | 0] ?? BOSS_ENEMIES[0];
+export const ENEMY_IDS: readonly EnemyId[] = [...new Set([...EASY_ENEMIES, ...HARD_ENEMIES, ...BOSS_ENEMIES])];
 
-  for (let index = order.length - 1; index > 0; index -= 1) {
-    const swapIndex = (Math.random() * (index + 1)) | 0;
-    [order[index], order[swapIndex]] = [order[swapIndex], order[index]];
+const pickFromPool = (pool: readonly EnemyId[]): EnemyId =>
+  pool[(Math.random() * pool.length) | 0] ?? pool[0];
+
+export const generateEncounterOrder = (): EnemyId[][] => {
+  const encounters: EnemyId[][] = [];
+
+  for (let floor = 0; floor < PRE_BOSS_FLOOR_COUNT; floor += 1) {
+    if (floor < EASY_FLOOR_COUNT) {
+      encounters.push([pickFromPool(EASY_ENEMIES)]);
+      continue;
+    }
+
+    const lead = pickFromPool(HARD_ENEMIES);
+    const hasSupport = Math.random() < 0.65;
+    if (!hasSupport) {
+      encounters.push([lead]);
+      continue;
+    }
+
+    let support = pickFromPool(HARD_ENEMIES);
+    if (support === lead) {
+      support = pickFromPool(EASY_ENEMIES);
+    }
+    encounters.push([lead, support]);
   }
 
-  order.push(boss);
-  return order;
-})();
+  const boss = pickFromPool(BOSS_ENEMIES);
+  encounters.push([boss]);
+  return encounters;
+};
 
-export const createEnemyState = (enemyId: EnemyId): EnemyState => ENEMY_DEFS[enemyId].createState();
+export const createEnemyState = (enemyId: EnemyId): EnemyState => {
+  const enemy = ENEMY_DEFS[enemyId].createState();
+  if (enemy.id === "rat_swarm") {
+    const scaledStacks = Math.max(1, Math.round(enemy.stacks * SWARM_STACK_SCALE));
+    enemy.stacks = scaledStacks;
+    enemy.hp = scaledStacks;
+    enemy.maxHp = scaledStacks;
+    return enemy;
+  }
+
+  const scaledMaxHp = Math.max(1, Math.round(enemy.maxHp * ENEMY_HP_SCALE));
+  enemy.maxHp = scaledMaxHp;
+  enemy.hp = Math.min(enemy.hp, scaledMaxHp);
+  return enemy;
+};
 
 export const getEnemyDef = <TEnemy extends EnemyState>(enemy: TEnemy): EnemyDef<TEnemy> =>
   ENEMY_DEFS[enemy.id] as unknown as EnemyDef<TEnemy>;
