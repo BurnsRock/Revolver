@@ -39,6 +39,8 @@ const PLAYER_MAX_HP = 35;
 const BLANK_GUARD = 6;
 const MAX_COMBO_BONUS = 3;
 const OVERHEAT_THRESHOLD = 6;
+const PLAYER_DAMAGE_SCALE = 1.2;
+const PLAYER_GUARD_SCALE = 1.35;
 
 const emitLog = (events: CombatEvent[], text: string): void => {
   events.push({ type: "log", text });
@@ -74,6 +76,8 @@ const cloneState = (state: CombatState): CombatState => ({
   heat: state.heat,
   player: { ...state.player },
   enemy: cloneEnemy(state.enemy),
+  enemies: state.enemies.map((enemy) => cloneEnemy(enemy)),
+  selectedEnemyIndex: state.selectedEnemyIndex,
   deck: {
     draw: [...state.deck.draw],
     discard: [...state.deck.discard],
@@ -109,6 +113,17 @@ const isEnemyDefeated = (enemy: EnemyState): boolean => {
   return enemy.hp <= 0;
 };
 
+const isEncounterDefeated = (state: CombatState): boolean =>
+  state.enemies.every((enemy) => isEnemyDefeated(enemy));
+
+const getEnemyByIndex = (state: CombatState, index: number): EnemyState => {
+  const clamped = Math.max(0, Math.min(index, state.enemies.length - 1));
+  const enemy = state.enemies[clamped] ?? state.enemies[0];
+  state.selectedEnemyIndex = clamped;
+  state.enemy = enemy;
+  return enemy;
+};
+
 const damageEnemy = (
   state: CombatState,
   amount: number,
@@ -117,6 +132,7 @@ const damageEnemy = (
   ignoreArmor: boolean = false,
 ): number => {
   const enemy = state.enemy;
+  const scaledAmount = Math.max(0, Math.ceil(amount * PLAYER_DAMAGE_SCALE));
   let extra = 0;
   if (enemy.marked) {
     extra += 2;
@@ -129,10 +145,14 @@ const damageEnemy = (
     emitLog(events, "Porked target is destabilized, taking +1 bonus damage.");
   }
 
-  const effectiveAmount = amount + extra;
+  const effectiveAmount = scaledAmount + extra;
   const blocked = ignoreArmor ? 0 : Math.min(effectiveArmor(enemy), effectiveAmount);
   const applied = Math.max(0, effectiveAmount - blocked);
   enemy.hp = Math.max(0, enemy.hp - applied);
+  if (enemy.id === "rat_swarm") {
+    enemy.stacks = enemy.hp;
+    syncRatSwarm(enemy);
+  }
   events.push({
     type: "enemy_damaged",
     amount: applied,
@@ -173,13 +193,14 @@ const grantGuard = (
   events: CombatEvent[],
   source: string,
 ): void => {
-  state.player.guard += amount;
+  const scaledAmount = Math.max(1, Math.ceil(amount * PLAYER_GUARD_SCALE));
+  state.player.guard += scaledAmount;
   events.push({
     type: "guard_gained",
-    amount,
+    amount: scaledAmount,
     total: state.player.guard,
   });
-  emitLog(events, `${source} grants ${amount} guard.`);
+  emitLog(events, `${source} grants ${scaledAmount} guard.`);
 };
 
 const damagePlayer = (
@@ -580,12 +601,14 @@ const performReload = (state: CombatState, events: CombatEvent[]): void => {
 
 export const createCombatState = (
   seed: number,
-  enemyId: EnemyId,
+  enemyIds: EnemyId | EnemyId[],
   loadout: readonly BulletType[] = STARTER_LOADOUT,
   accessories: readonly AccessoryId[] = [],
 ): CombatState => {
   const normalizedSeed = normalizeSeed(seed);
   const deckResult = createDeckState(loadout, normalizedSeed);
+  const encounterEnemyIds = Array.isArray(enemyIds) ? enemyIds : [enemyIds];
+  const enemies = encounterEnemyIds.map((enemyId) => createEnemyState(enemyId));
   const baseState: CombatState = {
     seed: deckResult.seed,
     turn: 1,
@@ -596,7 +619,9 @@ export const createCombatState = (
       maxHp: PLAYER_MAX_HP,
       guard: 0,
     },
-    enemy: createEnemyState(enemyId),
+    enemy: enemies[0] ?? createEnemyState("rat_swarm"),
+    enemies,
+    selectedEnemyIndex: 0,
     deck: deckResult.deck,
     cylinder: createEmptyCylinder(),
     accessories: [...accessories],
@@ -613,48 +638,48 @@ const resolveEnemyTurn = (
   state: CombatState,
   events: CombatEvent[],
 ): "victory" | "defeat" | null => {
-  const enemyDef = getEnemyDef(state.enemy);
-  enemyDef.onTurnStart?.(state, state.enemy as never, (event) => events.push(event));
-
-  if (state.enemy.burn && state.enemy.burn > 0) {
-    damageEnemy(state, 1, "Burn", events);
-    state.enemy.burn -= 1;
-    events.push({ type: "status_applied", target: "enemy", status: "burn", amount: 1, total: state.enemy.burn });
-    emitLog(events, "Burn continues to rack the enemy.");
-  }
-
-  if (state.enemy.id !== "rat_swarm" && state.enemy.infestation && state.enemy.infestation > 0) {
-    damageEnemy(state, 1, "Infestation", events);
-    state.enemy.infestation -= 1;
-    events.push({ type: "status_applied", target: "enemy", status: "infestation", amount: 1, total: state.enemy.infestation });
-    emitLog(events, "Infestation spreads in the enemy flesh.");
-  }
-
-  if (state.enemy.stun && state.enemy.stun > 0) {
-    state.enemy.stun -= 1;
-    emitLog(events, "Enemy is stunned and skips its action.");
-    if (isEnemyDefeated(state.enemy)) {
-      return "victory";
+  for (let enemyIndex = 0; enemyIndex < state.enemies.length; enemyIndex += 1) {
+    const enemy = getEnemyByIndex(state, enemyIndex);
+    if (isEnemyDefeated(enemy)) {
+      continue;
     }
+    const enemyDef = getEnemyDef(enemy);
+    enemyDef.onTurnStart?.(state, enemy as never, (event) => events.push(event));
+
+    if (enemy.burn && enemy.burn > 0) {
+      damageEnemy(state, 1, "Burn", events);
+      enemy.burn -= 1;
+      events.push({ type: "status_applied", target: "enemy", status: "burn", amount: 1, total: enemy.burn });
+      emitLog(events, "Burn continues to rack the enemy.");
+    }
+
+    if (enemy.id !== "rat_swarm" && enemy.infestation && enemy.infestation > 0) {
+      damageEnemy(state, 1, "Infestation", events);
+      enemy.infestation -= 1;
+      events.push({ type: "status_applied", target: "enemy", status: "infestation", amount: 1, total: enemy.infestation });
+      emitLog(events, "Infestation spreads in the enemy flesh.");
+    }
+
+    if (enemy.stun && enemy.stun > 0) {
+      enemy.stun -= 1;
+      emitLog(events, `${enemy.label} is stunned and skips its action.`);
+      continue;
+    }
+
+    if (isEnemyDefeated(enemy)) {
+      continue;
+    }
+
+    enemyDef.act(state, enemy as never, (event) => events.push(event));
+    decayEnemyStatuses(enemy, events);
+
     if (state.player.hp <= 0) {
       return "defeat";
     }
-    return null;
   }
 
-  if (isEnemyDefeated(state.enemy)) {
+  if (isEncounterDefeated(state)) {
     return "victory";
-  }
-
-  enemyDef.act(state, state.enemy as never, (event) => events.push(event));
-  decayEnemyStatuses(state.enemy, events);
-
-  if (isEnemyDefeated(state.enemy)) {
-    return "victory";
-  }
-
-  if (state.player.hp <= 0) {
-    return "defeat";
   }
 
   return null;
@@ -663,12 +688,15 @@ const resolveEnemyTurn = (
 export const stepCombat = (
   state: CombatState,
   action: PlayerAction,
+  targetEnemyIndex: number = state.selectedEnemyIndex,
 ): CombatStepResult => {
   if (state.over) {
     return { state, events: [{ type: "log", text: "Encounter already resolved." }] };
   }
 
   const nextState = cloneState(state);
+  const selectedEnemyIndex = Math.max(0, Math.min(targetEnemyIndex, nextState.enemies.length - 1));
+  getEnemyByIndex(nextState, selectedEnemyIndex);
   const events: CombatEvent[] = [];
   events.push({ type: "player_action", action });
   let lostTurnToHeat = false;
@@ -754,6 +782,10 @@ export const stepCombat = (
   }
 
   if (isEnemyDefeated(nextState.enemy)) {
+    emitLog(events, `${nextState.enemy.label} is down.`);
+  }
+
+  if (isEncounterDefeated(nextState)) {
     return finishEncounter(nextState, events, "victory");
   }
 
@@ -775,6 +807,7 @@ export const stepCombat = (
   }
 
   nextState.turn += turnAdvance;
+  getEnemyByIndex(nextState, selectedEnemyIndex);
   events.push({ type: "enemy_intent", intent: getEnemyIntent(nextState.enemy).label });
   return { state: nextState, events };
 };
@@ -817,6 +850,16 @@ export const getCombatSnapshot = (state: CombatState) => ({
     traitTags: getEnemyTraitTags(state.enemy),
     metrics: describeEnemyMetrics(state.enemy),
   },
+  enemies: state.enemies.map((enemy, index) => ({
+    id: enemy.id,
+    label: enemy.label,
+    intent: getEnemyIntent(enemy),
+    tags: getEnemyStateTags(enemy),
+    metrics: describeEnemyMetrics(enemy),
+    defeated: isEnemyDefeated(enemy),
+    selected: index === state.selectedEnemyIndex,
+  })),
+  selectedEnemyIndex: state.selectedEnemyIndex,
   cylinder: {
     currentIndex: state.cylinder.currentIndex,
     direction: CYLINDER_ROTATION_DIRECTION,
