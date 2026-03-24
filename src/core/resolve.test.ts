@@ -114,6 +114,22 @@ describe("combat matchups", () => {
     expect(result.state.enemy.hp).toBe(droidState.enemy.hp - 4);
   });
 
+  it("rat swarm is defeated when generic damage drops hp to zero", () => {
+    const swarmState = createCombatState(19, "rat_swarm");
+    if (swarmState.enemy.id !== "rat_swarm") {
+      throw new Error("Expected rat swarm state.");
+    }
+
+    swarmState.enemy.stacks = 1;
+    swarmState.enemy.hp = 1;
+    swarmState.enemy.maxHp = 1;
+
+    const result = stepCombat(withBulletReady(swarmState, "basic"), "fire");
+
+    expect(result.state.outcome).toBe("victory");
+    expect(result.state.over).toBe(true);
+  });
+
   it("starter loadout includes hollow point and frangible without accessories", () => {
     expect(STARTER_LOADOUT).toContain("hollow_point");
     expect(STARTER_LOADOUT).toContain("frangible");

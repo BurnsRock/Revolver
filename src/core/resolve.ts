@@ -149,6 +149,10 @@ const damageEnemy = (
   const blocked = ignoreArmor ? 0 : Math.min(effectiveArmor(enemy), effectiveAmount);
   const applied = Math.max(0, effectiveAmount - blocked);
   enemy.hp = Math.max(0, enemy.hp - applied);
+  if (enemy.id === "rat_swarm") {
+    enemy.stacks = enemy.hp;
+    syncRatSwarm(enemy);
+  }
   events.push({
     type: "enemy_damaged",
     amount: applied,
