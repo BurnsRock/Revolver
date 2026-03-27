@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CombatScene, GAME_BOUNDS } from "./CombatScene";
+import { ShopScene } from "./ShopScene";
 
 export const createGame = (): Phaser.Game => {
   const isAndroid = /Android/i.test(navigator.userAgent);
@@ -9,7 +10,7 @@ export const createGame = (): Phaser.Game => {
     height: GAME_BOUNDS.height,
     parent: "app",
     backgroundColor: "#11141a",
-    scene: [CombatScene],
+    scene: [CombatScene, ShopScene],
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

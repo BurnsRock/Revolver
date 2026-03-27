@@ -2,6 +2,7 @@ import type { AccessoryId, BulletDef, BulletType } from "../types";
 import { ACCESSORY_DEFS } from "./accessories";
 
 const BASE_UNLOCKED_BULLETS: readonly BulletType[] = ["basic", "blank", "hollow_point", "frangible"];
+export const MAX_LOADOUT_BULLETS = 8;
 
 const buildLoadout = (unlockedBullets: Iterable<BulletType>): BulletType[] => {
   const loadout: BulletType[] = [];
@@ -19,7 +20,7 @@ const buildLoadout = (unlockedBullets: Iterable<BulletType>): BulletType[] => {
 
 export const STARTER_LOADOUT: BulletType[] = buildLoadout(BASE_UNLOCKED_BULLETS);
 
-export const getLoadout = (
+export const getUnlockedBullets = (
   ownedAccessories: readonly AccessoryId[],
 ): BulletType[] => {
   const unlockedBullets = new Set<BulletType>(BASE_UNLOCKED_BULLETS);
@@ -31,7 +32,38 @@ export const getLoadout = (
       }
     }
   }
-  return buildLoadout(unlockedBullets);
+  return [...unlockedBullets];
+};
+
+export const getDefaultAmmoLoadout = (
+  ownedAccessories: readonly AccessoryId[],
+): BulletType[] => getUnlockedBullets(ownedAccessories).slice(0, MAX_LOADOUT_BULLETS);
+
+export const normalizeAmmoLoadout = (
+  selectedBullets: readonly BulletType[],
+  ownedAccessories: readonly AccessoryId[],
+): BulletType[] => {
+  const unlocked = new Set<BulletType>(getUnlockedBullets(ownedAccessories));
+  const filtered: BulletType[] = [];
+  for (const bullet of selectedBullets) {
+    if (!unlocked.has(bullet) || filtered.includes(bullet)) {
+      continue;
+    }
+    filtered.push(bullet);
+    if (filtered.length >= MAX_LOADOUT_BULLETS) {
+      break;
+    }
+  }
+  if (filtered.length > 0) {
+    return filtered;
+  }
+  return getDefaultAmmoLoadout(ownedAccessories);
+};
+
+export const getLoadout = (
+  ownedAccessories: readonly AccessoryId[],
+): BulletType[] => {
+  return buildLoadout(getUnlockedBullets(ownedAccessories));
 };
 
 export const BULLET_DEFS: Record<BulletType, BulletDef> = {
