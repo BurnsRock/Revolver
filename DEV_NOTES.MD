@@ -31,6 +31,7 @@
 - Rifle mods - unlocks rifle ammo
 - Shotgun mods - unlocks shotgun ammo
 - Hunter's boots - unlocks bioweapons (pork, tranq darts and seed bullets)
+- Tactical(?) gloves - heat does 1 less damage each tick
 
 
 ## Bullet Ideas
@@ -45,6 +46,7 @@
 - Signal Flare - fire damage
 - BB ?
 - Ball Net (trap/ensnare)
+- High recoil - grants block (by moving you back)
 
 
 
