@@ -1,9 +1,12 @@
 # Revolver Game Notes
 
 ## 🔥 Current Focus
-- Finish boss
-- Tune heat system
-- Balance birdshot vs swarm
+- Add more mods (or relics)
+- Enemy Variety 
+- More acts
+- Shop remake
+- Ammo selection (deckbuilding)
+- Better graphics
 
 ---
 
@@ -55,12 +58,12 @@
 
 ## 🧠 Mechanics (Locked)
 - 6 chamber cylinder
-- Heat system (3+ damage, 6 overheat)
+- Heat system (3+ heat deals increasing damage, 6 overheat)
 - Actions: FIRE, ROTATE, SPIN, RELOAD
 
 ---
 
-## 🧱 MVP Scope
+## 🧱 MVP Scope (done!)
 - 4 ammo types
 - 4 enemies
 - 1 boss
@@ -78,12 +81,4 @@
 
 ## 🐛 Problems
 - fights feel repetitive after turn 4
-- spin might be too strong
-- reload has no downside
 
----
-
-## 💡 To Test Next
-- heat scaling damage (1/2/3)
-- blank → slug combo
-- reduce ammo pool size
