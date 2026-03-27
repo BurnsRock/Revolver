@@ -8,6 +8,7 @@ import {
 } from "../core/cylinder";
 import { getEnemyIntent } from "../core/content/enemies";
 import { CombatSession } from "./CombatSession";
+import { ShopScene } from "./ShopScene";
 import type { AccessoryId, BulletType, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
 
 const GAME_WIDTH = 1180;
@@ -288,6 +289,10 @@ export class CombatScene extends Phaser.Scene {
     this.createBackground();
     this.createHud();
     this.bindInputs();
+    this.game.events.on("shop:continue", this.handleShopContinue, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off("shop:continue", this.handleShopContinue, this);
+    });
     this.startRun();
     this.session.openMainMenu();
     this.refreshUi();
@@ -865,24 +870,21 @@ export class CombatScene extends Phaser.Scene {
 
     keyboard.on("keydown-ONE", () => {
       if (this.session.getMode() === "shop") {
-        this.buyShopAccessory(0);
-      } else {
-        this.startEncounter(["rat_swarm"]);
+        return;
       }
+      this.startEncounter(["rat_swarm"]);
     });
     keyboard.on("keydown-TWO", () => {
       if (this.session.getMode() === "shop") {
-        this.buyShopAccessory(1);
-      } else {
-        this.startEncounter(["riot_droid"]);
+        return;
       }
+      this.startEncounter(["riot_droid"]);
     });
     keyboard.on("keydown-THREE", () => {
       if (this.session.getMode() === "shop") {
-        this.buyShopAccessory(2);
-      } else {
-        this.startEncounter(["sniper"]);
+        return;
       }
+      this.startEncounter(["sniper"]);
     });
     keyboard.on("keydown-FOUR", () => {
       if (this.session.getMode() !== "shop") {
@@ -966,6 +968,10 @@ export class CombatScene extends Phaser.Scene {
       this.syncEncounterVisualState();
     }
     this.refreshUi();
+  }
+
+  private handleShopContinue(): void {
+    this.leaveShop();
   }
 
   private buyShopAccessory(index: number): void {
@@ -1183,52 +1189,17 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private refreshShopUi(): void {
-    const shopVisible = this.session.getMode() === "shop";
-    this.shopOverlay.setVisible(shopVisible);
-    this.shopPanel.setVisible(shopVisible);
-    this.shopTitleText.setVisible(shopVisible);
-    this.shopMoneyText.setVisible(shopVisible);
-    this.shopHintText.setVisible(shopVisible);
-    this.shopContinueButton.box.setVisible(shopVisible);
-    this.shopContinueButton.label.setVisible(shopVisible);
-
-    if (!shopVisible) {
-      this.shopOptionVisuals.forEach((option) => {
-        option.box.setVisible(false);
-        option.title.setVisible(false);
-        option.body.setVisible(false);
-      });
-      return;
-    }
-
-    this.shopTitleText.setText("SHOP");
-    this.shopMoneyText.setText(`Credits: $${this.session.getMoney()}`);
-    this.shopHintText.setText("1 / 2 / 3 buy\nEnter or click Continue for the next combat");
-
-    this.shopOptionVisuals.forEach((option, index) => {
-      const accessoryId = this.session.getShopStock()[index] ?? null;
-      option.box.setVisible(true);
-      option.title.setVisible(true);
-      option.body.setVisible(true);
-
-      if (!accessoryId) {
-        option.box.setFillStyle(0x1a2532, 0.9);
-        option.box.setStrokeStyle(2, 0x4e6177, 0.75);
-        option.title.setText(`${index + 1}. SOLD`);
-        option.title.setColor("#9eb0c5");
-        option.body.setText("No item here.");
-        option.body.setColor("#9eb0c5");
-        return;
-      }
-
-      const accessory = ACCESSORY_DEFS[accessoryId];
-      const affordable = this.session.getMoney() >= accessory.price;
-      option.box.setFillStyle(affordable ? 0x223246 : 0x2a1d1d, 0.98);
-      option.box.setStrokeStyle(2, affordable ? 0xf1c66b : 0xa26d6d, 0.92);
-      option.title.setText(`${index + 1}. ${accessory.label}\n$${accessory.price}`);
-      option.title.setColor(affordable ? "#fff6db" : "#f2c7c7");
-      option.body.setText(`${accessory.effect}\n\n${accessory.description}`);
-      option.body.setColor(affordable ? "#d7dee8" : "#d2b6b6");
+    this.shopOverlay.setVisible(false);
+    this.shopPanel.setVisible(false);
+    this.shopTitleText.setVisible(false);
+    this.shopMoneyText.setVisible(false);
+    this.shopHintText.setVisible(false);
+    this.shopContinueButton.box.setVisible(false);
+    this.shopContinueButton.label.setVisible(false);
+    this.shopOptionVisuals.forEach((option) => {
+      option.box.setVisible(false);
+      option.title.setVisible(false);
+      option.body.setVisible(false);
     });
   }
 
@@ -1502,8 +1473,22 @@ export class CombatScene extends Phaser.Scene {
     this.victoryRestartButton.label.setVisible(victoryVisible);
 
     this.refreshShopUi();
+    this.refreshShopScene();
     this.refreshLogOverlay();
     this.hideBulletTooltip();
+  }
+
+  private refreshShopScene(): void {
+    const shopActive = this.session.getMode() === "shop";
+    const isSceneActive = this.scene.isActive(ShopScene.SCENE_KEY);
+    if (shopActive && !isSceneActive) {
+      this.scene.launch(ShopScene.SCENE_KEY, { session: this.session });
+      return;
+    }
+
+    if (!shopActive && isSceneActive) {
+      this.scene.stop(ShopScene.SCENE_KEY);
+    }
   }
 }
 

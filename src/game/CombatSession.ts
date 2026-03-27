@@ -1,8 +1,12 @@
 import { ACCESSORY_DEFS, createShopStock } from "../core/content/accessories";
-import { getLoadout } from "../core/content/bullets";
+import {
+  getDefaultAmmoLoadout,
+  getUnlockedBullets,
+  normalizeAmmoLoadout,
+} from "../core/content/bullets";
 import { createEnemyState, generateEncounterOrder } from "../core/content/enemies";
 import { createCombatState, getCombatSnapshot, stepCombat } from "../core/resolve";
-import type { AccessoryId, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
+import type { AccessoryId, BulletType, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
 
 const INITIAL_SEED_BASE = 1337;
 const INITIAL_SHOP_SEED = 4001;
@@ -20,6 +24,9 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
 };
 
 export type ScreenMode = "main_menu" | "combat" | "shop" | "death" | "victory";
+export type ShopPurchaseResult =
+  | { ok: false; unlockedAmmo: false }
+  | { ok: true; unlockedAmmo: boolean };
 
 export class CombatSession {
   private encounterIndex = 0;
@@ -29,6 +36,8 @@ export class CombatSession {
   private mode: ScreenMode = "combat";
   private money = 0;
   private ownedAccessories: AccessoryId[] = [];
+  private selectedLoadout: BulletType[] = [];
+  private pendingAmmoSelection = false;
   private shopStock: Array<AccessoryId | null> = [];
   private state!: CombatState;
   private logs: string[] = [];
@@ -43,6 +52,27 @@ export class CombatSession {
 
   public getOwnedAccessories(): readonly AccessoryId[] {
     return this.ownedAccessories;
+  }
+
+  public getUnlockedBullets(): readonly BulletType[] {
+    return getUnlockedBullets(this.ownedAccessories);
+  }
+
+  public getSelectedLoadout(): readonly BulletType[] {
+    return this.selectedLoadout;
+  }
+
+  public setSelectedLoadout(loadout: readonly BulletType[]): void {
+    this.selectedLoadout = normalizeAmmoLoadout(loadout, this.ownedAccessories);
+    this.pendingAmmoSelection = false;
+  }
+
+  public shouldPromptAmmoSelection(): boolean {
+    return this.pendingAmmoSelection;
+  }
+
+  public clearAmmoSelectionPrompt(): void {
+    this.pendingAmmoSelection = false;
   }
 
   public getShopStock(): readonly (AccessoryId | null)[] {
@@ -121,6 +151,8 @@ export class CombatSession {
     this.mode = "combat";
     this.money = 0;
     this.ownedAccessories = [];
+    this.selectedLoadout = getDefaultAmmoLoadout(this.ownedAccessories);
+    this.pendingAmmoSelection = false;
     this.shopStock = [];
     this.seedBase = INITIAL_SEED_BASE;
     this.shopSeed = INITIAL_SHOP_SEED;
@@ -180,8 +212,9 @@ export class CombatSession {
     }
     this.seedBase += 97;
     this.mode = "combat";
-    const loadout = getLoadout(this.ownedAccessories);
-    this.state = createCombatState(this.seedBase, encounterEnemyIds, loadout, this.ownedAccessories);
+    const loadout = normalizeAmmoLoadout(this.selectedLoadout, this.ownedAccessories);
+    this.selectedLoadout = loadout;
+    this.state = createCombatState(this.seedBase, encounterEnemyIds, this.selectedLoadout, this.ownedAccessories);
     const labels = this.state.enemies.map((enemy) => enemy.label).join(" + ");
     this.logs = [`Loaded encounter: ${labels}.`];
   }
@@ -248,31 +281,38 @@ export class CombatSession {
     return true;
   }
 
-  public buyShopAccessory(index: number): void {
+  public buyShopAccessory(index: number): ShopPurchaseResult {
     if (this.mode !== "shop") {
-      return;
+      return { ok: false, unlockedAmmo: false };
     }
 
     const accessoryId = this.shopStock[index];
     if (!accessoryId) {
-      return;
+      return { ok: false, unlockedAmmo: false };
     }
 
     const accessory = ACCESSORY_DEFS[accessoryId];
     if (this.ownedAccessories.includes(accessoryId)) {
       this.pushLog(`${accessory.label} is already installed.`);
-      return;
+      return { ok: false, unlockedAmmo: false };
     }
 
     if (this.money < accessory.price) {
       this.pushLog(`Need $${accessory.price} for ${accessory.label}.`);
-      return;
+      return { ok: false, unlockedAmmo: false };
     }
 
     this.money -= accessory.price;
     this.ownedAccessories.push(accessoryId);
     this.shopStock[index] = null;
     this.pushLog(`Bought ${accessory.label}.`);
+    if (accessory.unlocks && accessory.unlocks.length > 0) {
+      this.pendingAmmoSelection = true;
+      this.pushLog("New ammo unlocked. Choose a loadout before continuing.");
+      this.selectedLoadout = normalizeAmmoLoadout(this.selectedLoadout, this.ownedAccessories);
+      return { ok: true, unlockedAmmo: true };
+    }
+    return { ok: true, unlockedAmmo: false };
   }
 
   private openShop(): void {
