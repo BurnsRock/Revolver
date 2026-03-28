@@ -55,9 +55,12 @@ export class ShopScene extends Phaser.Scene {
   }
 
   public create(): void {
+    this.accessoryCards.length = 0;
+    this.bulletToggles.clear();
+
     this.createBaseUi();
     this.createAmmoUi();
-    this.refreshUi();
+    this.time.delayedCall(100, () => this.refreshUi());
 
     if (this.session?.shouldPromptAmmoSelection()) {
       this.openAmmoSelection();
@@ -71,13 +74,13 @@ export class ShopScene extends Phaser.Scene {
     this.panel.setStrokeStyle(3, 0xf1c66b, 0.95);
 
     this.titleText = this.add.text(WIDTH / 2, 116, "SHOP", {
-      fontFamily: "Georgia, serif",
+      fontFamily: "Arial",
       fontSize: "40px",
       color: "#f4ddb0",
     }).setOrigin(0.5, 0);
 
-    this.moneyText = this.add.text(WIDTH / 2, 170, "", {
-      fontFamily: "Trebuchet MS, sans-serif",
+    this.moneyText = this.add.text(WIDTH / 2, 170, "a", {
+      fontFamily: "Arial",
       fontSize: "24px",
       color: "#d7dee8",
     }).setOrigin(0.5, 0);
@@ -90,32 +93,24 @@ export class ShopScene extends Phaser.Scene {
       box.on("pointerdown", () => this.buyAccessory(index));
 
       const title = this.add.text(x, 250, "", {
-        fontFamily: "Trebuchet MS, sans-serif",
+        fontFamily: "Arial",
         fontSize: "22px",
         color: "#fff6db",
-        align: "center",
-        wordWrap: { width: 210 },
       }).setOrigin(0.5, 0);
 
-      const body = this.add.text(x, 312, "", {
-        fontFamily: "Trebuchet MS, sans-serif",
+      const body = this.add.text(x, 312, "a", {
+        fontFamily: "Arial",
         fontSize: "16px",
         color: "#d7dee8",
-        align: "center",
-        lineSpacing: 5,
-        wordWrap: { width: 210 },
       }).setOrigin(0.5, 0);
 
       this.accessoryCards.push({ box, title, body });
     });
 
-    this.hintText = this.add.text(WIDTH / 2, 540, "", {
-      fontFamily: "Trebuchet MS, sans-serif",
+    this.hintText = this.add.text(WIDTH / 2, 540, "a", {
+      fontFamily: "Arial",
       fontSize: "20px",
       color: "#d7dee8",
-      align: "center",
-      lineSpacing: 6,
-      wordWrap: { width: 860 },
     }).setOrigin(0.5, 0);
 
     this.ammoButton = this.add.rectangle(WIDTH / 2 - 150, 664, 280, 52, 0x31465d, 0.98);
@@ -124,7 +119,7 @@ export class ShopScene extends Phaser.Scene {
     this.ammoButton.on("pointerdown", () => this.openAmmoSelection());
 
     this.ammoButtonLabel = this.add.text(WIDTH / 2 - 150, 664, "AMMO LOADOUT", {
-      fontFamily: "Trebuchet MS, sans-serif",
+      fontFamily: "Arial",
       fontSize: "22px",
       color: "#fff6db",
     }).setOrigin(0.5);
@@ -135,7 +130,7 @@ export class ShopScene extends Phaser.Scene {
     this.continueButton.on("pointerdown", () => this.continueToCombat());
 
     this.continueLabel = this.add.text(WIDTH / 2 + 150, 664, "CONTINUE", {
-      fontFamily: "Trebuchet MS, sans-serif",
+      fontFamily: "Arial",
       fontSize: "22px",
       color: "#fff6db",
     }).setOrigin(0.5);
@@ -148,19 +143,15 @@ export class ShopScene extends Phaser.Scene {
     this.ammoPanel.setVisible(false);
 
     this.ammoTitleText = this.add.text(WIDTH / 2, 150, "AMMO LOADOUT", {
-      fontFamily: "Georgia, serif",
+      fontFamily: "Arial",
       fontSize: "34px",
       color: "#f4ddb0",
-      align: "center",
     }).setOrigin(0.5, 0).setDepth(21).setVisible(false);
 
-    this.ammoHintText = this.add.text(WIDTH / 2, 196, "", {
-      fontFamily: "Trebuchet MS, sans-serif",
+    this.ammoHintText = this.add.text(WIDTH / 2, 196, "a", {
+      fontFamily: "Arial",
       fontSize: "20px",
       color: "#d7dee8",
-      align: "center",
-      lineSpacing: 6,
-      wordWrap: { width: 820 },
     }).setOrigin(0.5, 0).setDepth(21).setVisible(false);
 
     this.ammoDoneButton = this.add.rectangle(WIDTH / 2, 642, 250, 52, 0x8f6422, 0.98);
@@ -171,7 +162,7 @@ export class ShopScene extends Phaser.Scene {
     this.ammoDoneButton.on("pointerdown", () => this.applyAmmoSelection());
 
     this.ammoDoneLabel = this.add.text(WIDTH / 2, 642, "APPLY LOADOUT", {
-      fontFamily: "Trebuchet MS, sans-serif",
+      fontFamily: "Arial",
       fontSize: "22px",
       color: "#fff6db",
     }).setOrigin(0.5).setDepth(22).setVisible(false);
@@ -213,12 +204,10 @@ export class ShopScene extends Phaser.Scene {
       box.setInteractive({ useHandCursor: true });
       box.on("pointerdown", () => this.toggleAmmo(bullet));
 
-      const text = this.add.text(x, y, "", {
-        fontFamily: "Trebuchet MS, sans-serif",
+      const text = this.add.text(x, y, "a", {
+        fontFamily: "Arial",
         fontSize: "16px",
         color: "#d7dee8",
-        align: "center",
-        wordWrap: { width: 180 },
       }).setOrigin(0.5).setDepth(22).setVisible(false);
 
       this.bulletToggles.set(bullet, { box, text });
@@ -257,6 +246,26 @@ export class ShopScene extends Phaser.Scene {
     this.session.setSelectedLoadout([...this.selectedAmmo]);
     this.ammoSelectOpen = false;
     this.refreshUi();
+  }
+
+  private safeSetText(textObj: Phaser.GameObjects.Text | null | undefined, text: string): void {
+    if (!textObj || !textObj.scene || !textObj.active || !textObj.visible || !this.game.canvas || !textObj.texture) {
+      return;
+    }
+
+    try {
+      textObj.setText(text);
+    } catch (err) {
+      console.warn("ShopScene safeSetText: failed", text, err);
+    }
+  }
+
+  private isValidRect(rect: Phaser.GameObjects.Rectangle | null | undefined): rect is Phaser.GameObjects.Rectangle {
+    return !!rect && !!rect.scene && !!rect.active;
+  }
+
+  private isValidText(textObj: Phaser.GameObjects.Text | null | undefined): textObj is Phaser.GameObjects.Text {
+    return !!textObj && !!textObj.scene && !!textObj.active && (!!textObj.texture || !!textObj.resolution);
   }
 
   private buyAccessory(index: number): void {
@@ -301,7 +310,7 @@ export class ShopScene extends Phaser.Scene {
       const selected = this.selectedAmmo.has(bullet);
       toggle.box.setFillStyle(selected ? 0x8f6422 : 0x223246, 0.98);
       toggle.box.setStrokeStyle(2, selected ? 0xf1c66b : 0x6e8298, 1);
-      toggle.text.setText(`${selected ? "✓ " : ""}${BULLET_DEFS[bullet].label}`);
+      this.safeSetText(toggle.text, `${selected ? "✓ " : ""}${BULLET_DEFS[bullet].label}`);
       toggle.text.setColor(selected ? "#fff6db" : "#d7dee8");
     });
 
@@ -309,9 +318,7 @@ export class ShopScene extends Phaser.Scene {
       return;
     }
 
-    this.ammoHintText.setText(
-      `Choose up to ${MAX_LOADOUT_BULLETS} bullets for this run.\nSelected: ${this.selectedAmmo.size}/${MAX_LOADOUT_BULLETS}`,
-    );
+    this.ammoHintText.setText(`Choose up to ${MAX_LOADOUT_BULLETS} bullets for this run. Selected: ${this.selectedAmmo.size}/${MAX_LOADOUT_BULLETS}`);
 
     const hasSelection = this.selectedAmmo.size > 0;
     this.ammoDoneButton.setAlpha(hasSelection ? 1 : 0.45);
@@ -323,38 +330,49 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private refreshUi(): void {
-    if (!this.session) {
+    if (!this.session || !this.scene.isActive()) {
       return;
     }
     const session = this.session;
 
-    this.moneyText.setText(`Credits: $${session.getMoney()}`);
+    this.safeSetText(this.moneyText, `Credits: $${session.getMoney()}`);
 
-    this.accessoryCards.forEach((card, index) => {
-      const accessoryId = session.getShopStock()[index] ?? null;
-      if (!accessoryId) {
-        card.box.setFillStyle(0x1a2532, 0.9);
-        card.box.setStrokeStyle(2, 0x4e6177, 0.75);
-        card.title.setText(`${index + 1}. SOLD`);
-        card.title.setColor("#9eb0c5");
-        card.body.setText("No item here.");
-        card.body.setColor("#9eb0c5");
-        return;
-      }
+    try {
+      this.accessoryCards.forEach((card, index) => {
+      if (!card || !this.isValidRect(card.box) || !this.isValidText(card.title) || !this.isValidText(card.body)) {
+          return;
+        }
 
-      const accessory = ACCESSORY_DEFS[accessoryId];
-      const affordable = session.getMoney() >= accessory.price;
-      card.box.setFillStyle(affordable ? 0x223246 : 0x2a1d1d, 0.98);
-      card.box.setStrokeStyle(2, affordable ? 0xf1c66b : 0xa26d6d, 0.92);
-      card.title.setText(`${index + 1}. ${accessory.label}\n$${accessory.price}`);
-      card.title.setColor(affordable ? "#fff6db" : "#f2c7c7");
-      card.body.setText(`${accessory.effect}\n\n${accessory.description}`);
-      card.body.setColor(affordable ? "#d7dee8" : "#d2b6b6");
-    });
+        const accessoryId = session.getShopStock()[index] ?? null;
+        if (!accessoryId) {
+          card.box.setFillStyle(0x1a2532, 0.9);
+          card.box.setStrokeStyle(2, 0x4e6177, 0.75);
+          this.safeSetText(card.title, `${index + 1}. SOLD`);
+          card.title.setColor("#9eb0c5");
+          this.safeSetText(card.body, "No item here.");
+          card.body.setColor("#9eb0c5");
+          return;
+        }
 
-    this.hintText.setText(
-      `Buy accessories to improve your run.\nMods that unlock ammo require choosing a new ammo loadout (${MAX_LOADOUT_BULLETS} max).`,
-    );
+        const accessory = ACCESSORY_DEFS[accessoryId];
+        if (!accessory) {
+          this.safeSetText(card.title, "UNKNOWN");
+          this.safeSetText(card.body, "Unknown item");
+          return;
+        }
+        const affordable = session.getMoney() >= accessory.price;
+        card.box.setFillStyle(affordable ? 0x223246 : 0x2a1d1d, 0.98);
+        card.box.setStrokeStyle(2, affordable ? 0xf1c66b : 0xa26d6d, 0.92);
+        this.safeSetText(card.title, `${index + 1}. ${accessory.label} - $${accessory.price}`);
+        card.title.setColor(affordable ? "#fff6db" : "#f2c7c7");
+        this.safeSetText(card.body, `${accessory.effect} ${accessory.description}`);
+        card.body.setColor(affordable ? "#d7dee8" : "#d2b6b6");
+      });
+    } catch (err) {
+      console.warn("ShopScene refreshUi accessoryCards error", err);
+    }
+
+    this.safeSetText(this.hintText, `Buy accessories to improve your run. Mods that unlock ammo require choosing a new ammo loadout (${MAX_LOADOUT_BULLETS} max).`);
 
     this.refreshAmmoUi();
   }

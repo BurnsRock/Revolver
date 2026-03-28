@@ -150,31 +150,31 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   tank: UI_TEXTURE_KEYS.tank,
   phantom_gunman: UI_TEXTURE_KEYS.phantom_gunman,
 };
-const cylinderImageUrl = new URL("../assets/images/initial/CYLINDER.PNG", import.meta.url).href;
-const playerImageUrl = new URL("../assets/images/initial/PLAYER.PNG", import.meta.url).href;
-const ratSwarmImageUrl = new URL("../assets/images/initial/RAT SWARM.PNG", import.meta.url).href;
-const riotDroidImageUrl = new URL("../assets/images/initial/RIOT DROID.PNG", import.meta.url).href;
-const sniperImageUrl = new URL("../assets/images/initial/SNIPER.PNG", import.meta.url).href;
-const droneImageUrl = new URL("../assets/images/initial/DRONE.PNG", import.meta.url).href;
-const maulerHoundImageUrl = new URL("../assets/images/initial/RAT STORM.PNG", import.meta.url).href;
+const cylinderImageUrl = new URL("../assets/images/cylinder-64.png", import.meta.url).href;
+const playerImageUrl = new URL("../assets/images/player-gunslinger-64.png", import.meta.url).href;
+const ratSwarmImageUrl = new URL("../assets/images/rat-swarm-64.png", import.meta.url).href;
+const riotDroidImageUrl = new URL("../assets/images/riot-droid-64.png", import.meta.url).href;
+const sniperImageUrl = new URL("../assets/images/sniper-64.png", import.meta.url).href;
+const droneImageUrl = new URL("../assets/images/drone-64.png", import.meta.url).href;
+const maulerHoundImageUrl = new URL("../assets/images/rat-storm-64.png", import.meta.url).href;
 const fieldMedicImageUrl = sniperImageUrl;
-const tankImageUrl = new URL("../assets/images/initial/TANK.PNG", import.meta.url).href;
-const phantomGunmanImageUrl = new URL("../assets/images/initial/PHANTOM GUNMAN.PNG", import.meta.url).href;
+const tankImageUrl = new URL("../assets/images/tank-64.png", import.meta.url).href;
+const phantomGunmanImageUrl = new URL("../assets/images/phantom-gunman-64.png", import.meta.url).href;
 const hexSlingerImageUrl = phantomGunmanImageUrl;
 
-const basicImageUrl = new URL("../assets/images/initial/Basic.PNG", import.meta.url).href;
-const birdshotImageUrl = new URL("../assets/images/initial/Birdshot.PNG", import.meta.url).href;
-const buckshotImageUrl = new URL("../assets/images/initial/Buckshot.PNG", import.meta.url).href;
-const slugImageUrl = new URL("../assets/images/initial/Slug.PNG", import.meta.url).href;
-const armorPiercingImageUrl = new URL("../assets/images/initial/AP.PNG", import.meta.url).href;
-const flechetteImageUrl = new URL("../assets/images/initial/Flechette.PNG", import.meta.url).href;
-const blankImageUrl = new URL("../assets/images/initial/Blank.PNG", import.meta.url).href;
-const tranqImageUrl = new URL("../assets/images/initial/Dart.PNG", import.meta.url).href;
-const markImageUrl = new URL("../assets/images/initial/Mark.PNG", import.meta.url).href;
-const seedImageUrl = new URL("../assets/images/initial/Seed.PNG", import.meta.url).href;
-const porkImageUrl = new URL("../assets/images/initial/Pork.PNG", import.meta.url).href;
-const flareImageUrl = new URL("../assets/images/initial/Flare.PNG", import.meta.url).href;
-const explosiveImageUrl = new URL("../assets/images/initial/Explosive.PNG", import.meta.url).href;
+const basicImageUrl = new URL("../assets/images/basic-64.png", import.meta.url).href;
+const birdshotImageUrl = new URL("../assets/images/birdshot-64.png", import.meta.url).href;
+const buckshotImageUrl = new URL("../assets/images/buckshot-64.png", import.meta.url).href;
+const slugImageUrl = new URL("../assets/images/slug-64.png", import.meta.url).href;
+const armorPiercingImageUrl = new URL("../assets/images/ap-64.png", import.meta.url).href;
+const flechetteImageUrl = new URL("../assets/images/flechette-64.png", import.meta.url).href;
+const blankImageUrl = new URL("../assets/images/blank-64.png", import.meta.url).href;
+const tranqImageUrl = new URL("../assets/images/dart-64.png", import.meta.url).href;
+const markImageUrl = new URL("../assets/images/mark-64.png", import.meta.url).href;
+const seedImageUrl = new URL("../assets/images/seed-64.png", import.meta.url).href;
+const porkImageUrl = new URL("../assets/images/pork-64.png", import.meta.url).href;
+const flareImageUrl = new URL("../assets/images/flare-64.png", import.meta.url).href;
+const explosiveImageUrl = new URL("../assets/images/explosive-64.png", import.meta.url).href;
 const hollowPointImageUrl = basicImageUrl;
 const frangibleImageUrl = birdshotImageUrl;
 const BULLET_TEXTURE_KEYS: Record<BulletType, string> = {
@@ -971,6 +971,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private handleShopContinue(): void {
+    this.scene.setVisible(true);
     this.leaveShop();
   }
 
@@ -1482,12 +1483,14 @@ export class CombatScene extends Phaser.Scene {
     const shopActive = this.session.getMode() === "shop";
     const isSceneActive = this.scene.isActive(ShopScene.SCENE_KEY);
     if (shopActive && !isSceneActive) {
+      this.scene.setVisible(false); // hide combat while shop is active
       this.scene.launch(ShopScene.SCENE_KEY, { session: this.session });
       return;
     }
 
     if (!shopActive && isSceneActive) {
       this.scene.stop(ShopScene.SCENE_KEY);
+      this.scene.setVisible(true); // restore combat visibility
     }
   }
 }
