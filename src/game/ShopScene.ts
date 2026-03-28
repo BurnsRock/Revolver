@@ -79,7 +79,7 @@ export class ShopScene extends Phaser.Scene {
       color: "#f4ddb0",
     }).setOrigin(0.5, 0);
 
-    this.moneyText = this.add.text(WIDTH / 2, 170, "a", {
+    this.moneyText = this.add.text(WIDTH / 2, 170, "", {
       fontFamily: "Arial",
       fontSize: "24px",
       color: "#d7dee8",
@@ -107,7 +107,7 @@ export class ShopScene extends Phaser.Scene {
       this.accessoryCards.push({ box, title, body });
     });
 
-    this.hintText = this.add.text(WIDTH / 2, 540, "a", {
+    this.hintText = this.add.text(WIDTH / 2, 540, "", {
       fontFamily: "Arial",
       fontSize: "20px",
       color: "#d7dee8",
@@ -148,7 +148,7 @@ export class ShopScene extends Phaser.Scene {
       color: "#f4ddb0",
     }).setOrigin(0.5, 0).setDepth(21).setVisible(false);
 
-    this.ammoHintText = this.add.text(WIDTH / 2, 196, "a", {
+    this.ammoHintText = this.add.text(WIDTH / 2, 196, "", {
       fontFamily: "Arial",
       fontSize: "20px",
       color: "#d7dee8",
@@ -204,7 +204,7 @@ export class ShopScene extends Phaser.Scene {
       box.setInteractive({ useHandCursor: true });
       box.on("pointerdown", () => this.toggleAmmo(bullet));
 
-      const text = this.add.text(x, y, "a", {
+      const text = this.add.text(x, y, "", {
         fontFamily: "Arial",
         fontSize: "16px",
         color: "#d7dee8",
