@@ -20,31 +20,30 @@
 - Enemy type matchups - robot, animal, supernatural
 
 ## Relic Ideas
-- Scope
-- Laser
-- Magazine ?
-- Bigger barrel
-- Gambling die - spin auto shoots where it lands
-- Beer - reduces heat
-- Instruction Manual - shoot twice
-- Tactical Vest - increases defense
-- Safety Goggles - 
-- Cargo pants - randomly? auto reloads
-- Practice Target - always do max damage
-- Rifle mods - unlocks rifle ammo
-- Shotgun mods - unlocks shotgun ammo
-- Hunter's boots - unlocks bioweapons (pork, tranq darts and seed bullets)
-- Tactical(?) gloves - heat does 1 less damage each tick
+- Scope - after spin or rotate, next shot ignores armor and evasive
+- Laser - increase damage of consecutive shots by +2 (except vs swarm)
+- Practice Target - increase damage of first bullet fired each combat, and after reload
+- Bigger barrel - revolver can now hold 8 bullets
+- Gambling die - spin now auto shoots where it lands
+- Beer - reduce heat by 1 every 2 turns
+- Instruction Manual - shoot twice when you shoot
+- Tactical Vest - grants 4 block every turn
+- Safety Goggles - prevents disruptions
+- Cargo pants - 30% to auto reload when there's at least 1 empty chamber
+- Rifle mod - unlocks rifle ammo
+- Shotgun mod - unlocks shotgun ammo
+- Hunter's mod - unlocks bioweapons (pork, tranq darts and seed bullets)
+- Tactical gloves - heat does 1 less damage each tick
 
 
 ## Bullet Ideas
-- frag hollow
+- frangible
 - hollow point
 - explosive shell
 - seed bullet
 - pork (institutionalized 2014) - inflicts poison/infection
 - hollow point
-- Full Metal Jacket
+- Full Metal Jacket (basic)
 - Tranq darts
 - Signal Flare - fire damage
 - BB ?

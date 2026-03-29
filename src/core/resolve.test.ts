@@ -21,7 +21,7 @@ import type { BulletType, CombatState } from "./types";
 
 const withBulletReady = (state: CombatState, bullet: BulletType): CombatState => ({
   ...state,
-  cylinder: loadCylinder(createEmptyCylinder(), [bullet]),
+  cylinder: loadCylinder(createEmptyCylinder(state.cylinder.capacity), [bullet]),
   deck: {
     draw: [],
     discard: [],
@@ -30,7 +30,7 @@ const withBulletReady = (state: CombatState, bullet: BulletType): CombatState =>
 
 const withLoadedCylinder = (state: CombatState, bullets: BulletType[]): CombatState => ({
   ...state,
-  cylinder: loadCylinder(createEmptyCylinder(), bullets),
+  cylinder: loadCylinder(createEmptyCylinder(state.cylinder.capacity), bullets),
   deck: {
     draw: [],
     discard: [],
@@ -85,8 +85,17 @@ describe("combat matchups", () => {
     expect(result.state.enemy.cycleIndex).toBe(0);
   });
 
+  it("tactical vest grants 4 guard at the start of the turn", () => {
+    const state = createCombatState(4, "riot_droid", undefined, ["tactical_vest"]);
+    state.player.guard = 0;
+
+    const result = stepCombat(state, "rotate");
+
+    expect(result.state.player.guard).toBe(4);
+  });
+
   it("quickloader holster grants guard on reload", () => {
-    const state = createCombatState(4, "riot_droid", undefined, ["quickloader_holster"]);
+    const state = createCombatState(40, "riot_droid", undefined, ["quickloader_holster"]);
     state.player.guard = 0;
 
     const result = stepCombat(state, "reload");
@@ -95,12 +104,20 @@ describe("combat matchups", () => {
   });
 
   it("spring ratchet grants guard on rotate", () => {
-    const state = createCombatState(5, "riot_droid", undefined, ["spring_ratchet"]);
+    const state = createCombatState(41, "riot_droid", undefined, ["spring_ratchet"]);
     state.player.guard = 0;
 
     const result = stepCombat(state, "rotate");
 
     expect(result.state.player.guard).toBe(7);
+  });
+
+  it("shock padding adds extra guard to blank shots", () => {
+    const state = withBulletReady(createCombatState(42, "drone", undefined, ["shock_padding"]), "blank");
+
+    const result = stepCombat(state, "fire");
+
+    expect(result.state.player.guard).toBe(14);
   });
 
   it("basic bullet deals standard damage", () => {
@@ -112,6 +129,74 @@ describe("combat matchups", () => {
       throw new Error("Expected riot droid result.");
     }
     expect(result.state.enemy.hp).toBe(droidState.enemy.hp - 4);
+  });
+
+  it("scope primes after rotate and lets the next shot punch through armor", () => {
+    let state = withLoadedCylinder(
+      createCombatState(60, "riot_droid", undefined, ["scope"]),
+      ["basic"],
+    );
+    state.enemy.armor = 6;
+    state.enemy.cycleIndex = 1;
+
+    state = stepCombat(state, "rotate").state;
+    const result = stepCombat(state, "fire");
+
+    expect(result.state.enemy.hp).toBe(26);
+    expect(result.state.scopePrimed).toBe(false);
+  });
+
+  it("laser adds damage to consecutive shots but not against rat swarm", () => {
+    let droneState = withLoadedCylinder(createCombatState(61, "drone", undefined, ["laser"]), ["basic", "basic"]);
+    droneState = stepCombat(droneState, "fire").state;
+    const droneFollowUp = stepCombat(droneState, "fire");
+
+    expect(droneFollowUp.state.enemy.hp).toBe(11);
+
+    let swarmState = withLoadedCylinder(createCombatState(62, "rat_swarm", undefined, ["laser"]), ["basic", "basic"]);
+    if (swarmState.enemy.id !== "rat_swarm") {
+      throw new Error("Expected rat swarm result.");
+    }
+    swarmState.enemy.hp = 9;
+    swarmState.enemy.stacks = 9;
+    swarmState.enemy.maxHp = 9;
+    swarmState = stepCombat(swarmState, "fire").state;
+    const swarmFollowUp = stepCombat(swarmState, "fire");
+
+    expect(swarmFollowUp.state.enemy.hp).toBe(1);
+  });
+
+  it("practice target boosts the first shot of combat and refreshes after reload", () => {
+    let state = withLoadedCylinder(
+      createCombatState(63, "drone", undefined, ["practice_target"]),
+      ["basic", "basic"],
+    );
+
+    const opener = stepCombat(state, "fire");
+    expect(opener.state.enemy.hp).toBe(18);
+
+    state = opener.state;
+    const reload = stepCombat(state, "reload");
+    expect(reload.state.practiceTargetPrimed).toBe(true);
+  });
+
+  it("bigger barrel increases cylinder capacity to 8", () => {
+    const state = createCombatState(64, "drone", undefined, ["bigger_barrel"]);
+
+    expect(state.cylinder.capacity).toBe(8);
+    expect(state.cylinder.chambers).toHaveLength(8);
+  });
+
+  it("instruction manual fires a second shot on fire actions", () => {
+    const state = withLoadedCylinder(
+      createCombatState(65, "drone", undefined, ["instruction_manual"]),
+      ["basic", "basic"],
+    );
+
+    const result = stepCombat(state, "fire");
+
+    expect(result.state.combo).toBe(2);
+    expect(result.state.enemy.hp).toBe(11);
   });
 
   it("rat swarm is defeated when generic damage drops hp to zero", () => {
@@ -275,6 +360,34 @@ describe("combat matchups", () => {
     expect(after.enemy.hp).toBe(13); // scaled round damage and mark bonus
   });
 
+  it("gambling die turns spin into a shot", () => {
+    const state = withLoadedCylinder(createCombatState(66, "drone", undefined, ["gambling_die"]), ["basic"]);
+
+    const result = stepCombat(state, "spin");
+
+    expect(result.events.some((event) => event.type === "bullet_fired" && event.bullet === "basic")).toBe(true);
+    expect(result.state.enemy.hp).toBe(20);
+  });
+
+  it("safety goggles prevent disruptive guard stripping", () => {
+    const state = createCombatState(67, "hex_slinger", undefined, ["safety_goggles"]);
+    state.player.guard = 6;
+    state.enemy.cycleIndex = 2;
+
+    const result = stepCombat(state, "rotate");
+
+    expect(result.state.player.guard).toBeGreaterThan(0);
+  });
+
+  it("cargo pants can auto reload after creating an empty chamber", () => {
+    const state = withLoadedCylinder(createCombatState(68, "drone", undefined, ["cargo_pants"]), ["basic", "basic"]);
+    state.seed = 1;
+
+    const result = stepCombat(state, "fire");
+
+    expect(result.events.some((event) => event.type === "cylinder_changed" && event.action === "reload")).toBe(true);
+  });
+
   it("seed bullet applies infestation damage over time", () => {
     let state = withLoadedCylinder(createCombatState(13, "drone"), ["seed", "blank"]);
     state = stepCombat(state, "fire").state;
@@ -329,6 +442,22 @@ describe("combat matchups", () => {
     const rotated = stepCombat(state, "rotate");
 
     expect(rotated.state.heat).toBe(0);
+  });
+
+  it("tactical gloves reduce each heat tick by 1", () => {
+    let state = withLoadedCylinder(
+      createCombatState(69, "riot_droid", undefined, ["tactical_gloves"]),
+      ["blank", "blank", "blank"],
+    );
+    state.enemy.cycleIndex = 3;
+    state.player.guard = 99;
+
+    state = stepCombat(state, "fire").state;
+    state = stepCombat(state, "fire").state;
+    state = stepCombat(state, "fire").state;
+
+    expect(state.heat).toBe(3);
+    expect(state.player.hp).toBe(35);
   });
 });
 

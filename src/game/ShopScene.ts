@@ -19,6 +19,18 @@ type BulletToggleVisual = {
   text: Phaser.GameObjects.Text;
 };
 
+const RARITY_LABELS = {
+  common: "Common",
+  uncommon: "Uncommon",
+  rare: "Rare",
+} as const;
+
+const RARITY_COLORS = {
+  common: { fill: 0x223246, stroke: 0x6e8298, title: "#fff6db", body: "#d7dee8" },
+  uncommon: { fill: 0x233027, stroke: 0x7cc48b, title: "#ebffe9", body: "#d7eee0" },
+  rare: { fill: 0x2d2137, stroke: 0xd3a6ff, title: "#f6e8ff", body: "#e6d7f4" },
+} as const;
+
 const WIDTH = 1180;
 const HEIGHT = 780;
 
@@ -265,7 +277,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private isValidText(textObj: Phaser.GameObjects.Text | null | undefined): textObj is Phaser.GameObjects.Text {
-    return !!textObj && !!textObj.scene && !!textObj.active && (!!textObj.texture || !!textObj.resolution);
+    return !!textObj && !!textObj.scene && !!textObj.active && !!textObj.texture;
   }
 
   private buyAccessory(index: number): void {
@@ -361,18 +373,22 @@ export class ShopScene extends Phaser.Scene {
           return;
         }
         const affordable = session.getMoney() >= accessory.price;
-        card.box.setFillStyle(affordable ? 0x223246 : 0x2a1d1d, 0.98);
-        card.box.setStrokeStyle(2, affordable ? 0xf1c66b : 0xa26d6d, 0.92);
-        this.safeSetText(card.title, `${index + 1}. ${accessory.label} - $${accessory.price}`);
-        card.title.setColor(affordable ? "#fff6db" : "#f2c7c7");
-        this.safeSetText(card.body, `${accessory.effect} ${accessory.description}`);
-        card.body.setColor(affordable ? "#d7dee8" : "#d2b6b6");
+        const rarityStyle = RARITY_COLORS[accessory.rarity];
+        card.box.setFillStyle(affordable ? rarityStyle.fill : 0x2a1d1d, 0.98);
+        card.box.setStrokeStyle(2, affordable ? rarityStyle.stroke : 0xa26d6d, 0.92);
+        this.safeSetText(
+          card.title,
+          `${index + 1}. ${accessory.label} [${RARITY_LABELS[accessory.rarity]}] - $${accessory.price}`,
+        );
+        card.title.setColor(affordable ? rarityStyle.title : "#f2c7c7");
+        this.safeSetText(card.body, `${accessory.effect}\n${accessory.description}`);
+        card.body.setColor(affordable ? rarityStyle.body : "#d2b6b6");
       });
     } catch (err) {
       console.warn("ShopScene refreshUi accessoryCards error", err);
     }
 
-    this.safeSetText(this.hintText, `Buy accessories to improve your run. Mods that unlock ammo require choosing a new ammo loadout (${MAX_LOADOUT_BULLETS} max).`);
+    this.safeSetText(this.hintText, `Buy relics and mods to improve your run. Ammo unlocks require choosing a new loadout (${MAX_LOADOUT_BULLETS} max).`);
 
     this.refreshAmmoUi();
   }

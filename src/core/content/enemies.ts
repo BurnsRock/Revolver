@@ -16,10 +16,13 @@ import type {
   SniperState,
   TankState,
 } from "../types";
+import { ACCESSORY_DEFS } from "./accessories";
 
 const emitLog = (emit: EventSink, text: string): void => {
   emit({ type: "log", text });
 };
+
+const hasAccessory = (state: CombatState, accessoryId: string): boolean => state.accessories.includes(accessoryId as never);
 
 const damagePlayer = (
   state: CombatState,
@@ -51,6 +54,10 @@ const healEnemy = (enemy: EnemyState, amount: number, emit: EventSink, source: s
 };
 
 const stripPlayerGuard = (state: CombatState, amount: number, emit: EventSink, source: string): void => {
+  if (hasAccessory(state, "safety_goggles")) {
+    emitLog(emit, `${ACCESSORY_DEFS.safety_goggles.label} prevents ${source.toLowerCase()} from disrupting you.`);
+    return;
+  }
   const removed = Math.min(state.player.guard, amount);
   state.player.guard -= removed;
   emitLog(emit, removed > 0 ? `${source} strips ${removed} guard.` : `${source} finds no guard to unravel.`);

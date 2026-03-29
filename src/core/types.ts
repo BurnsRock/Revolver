@@ -24,10 +24,20 @@ export type AccessoryId =
   | "spring_ratchet"
   | "quickloader_holster"
   | "shock_padding"
+  | "scope"
+  | "laser"
+  | "practice_target"
+  | "bigger_barrel"
+  | "gambling_die"
+  | "beer"
+  | "instruction_manual"
+  | "tactical_vest"
+  | "safety_goggles"
+  | "cargo_pants"
   | "shotgun_mod"
   | "rifle_mod"
   | "hunter_mod"
-  | "bioweapon_mod"
+  | "tactical_gloves"
   | "pyrotechnics_mod";
 
 export type EnemyId =
@@ -83,6 +93,7 @@ export interface AccessoryDef {
   id: AccessoryId;
   label: string;
   price: number;
+  rarity: "common" | "uncommon" | "rare";
   description: string;
   effect: string;
   unlocks?: BulletType[];
@@ -184,6 +195,8 @@ export interface CombatState {
   turn: number;
   combo: number;
   heat: number;
+  scopePrimed: boolean;
+  practiceTargetPrimed: boolean;
   player: PlayerState;
   enemy: EnemyState;
   enemies: EnemyState[];
