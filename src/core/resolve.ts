@@ -31,6 +31,7 @@ import type {
   PlayerAction,
   RatSwarmState,
   RiotDroidState,
+  ScorpionSwarmState,
   SniperState,
   TankState,
   PhantomGunmanState,
@@ -247,14 +248,18 @@ const getEffectiveEnemyTags = (enemy: EnemyState, context: ShotContext): ReturnT
 const hasEffectiveArmor = (enemy: EnemyState, context: ShotContext): boolean =>
   !context.ignoreArmor && hasArmor(enemy);
 
-const syncRatSwarm = (enemy: RatSwarmState): void => {
+const syncRatSwarm = (enemy: RatSwarmState | ScorpionSwarmState): void => {
   enemy.stacks = Math.max(0, enemy.stacks);
   enemy.hp = enemy.stacks;
   enemy.maxHp = Math.max(enemy.maxHp, enemy.stacks);
 };
 
+const isSwarmEnemy = (enemy: EnemyState): boolean => {
+  return getEnemyTraitTags(enemy).includes("swarm");
+};
+
 const isEnemyDefeated = (enemy: EnemyState): boolean => {
-  if (enemy.id === "rat_swarm") {
+  if (enemy.id === "rat_swarm" || enemy.id === "scorpion_swarm") {
     return enemy.stacks <= 0;
   }
   return enemy.hp <= 0;
@@ -300,6 +305,10 @@ const damageEnemy = (
     enemy.stacks = enemy.hp;
     syncRatSwarm(enemy);
   }
+  if (enemy.id === "scorpion_swarm") {
+    enemy.stacks = enemy.hp;
+    syncRatSwarm(enemy);
+  }
   events.push({
     type: "enemy_damaged",
     amount: applied,
@@ -315,14 +324,15 @@ const damageEnemy = (
 };
 
 const removeSwarmStacks = (
-  enemy: RatSwarmState,
+  enemy: EnemyState,
   amount: number,
   events: CombatEvent[],
   source: string,
 ): number => {
-  const removed = Math.min(enemy.stacks, amount);
-  enemy.stacks -= removed;
-  syncRatSwarm(enemy);
+  const swarmEnemy = enemy as RatSwarmState | ScorpionSwarmState;
+  const removed = Math.min(swarmEnemy.stacks, amount);
+  swarmEnemy.stacks -= removed;
+  syncRatSwarm(swarmEnemy);
   events.push({
     type: "enemy_damaged",
     amount: removed,
@@ -428,7 +438,7 @@ const buildCombo = (state: CombatState): void => {
 const buildShotContext = (state: CombatState, bullet: BulletType): ShotContext => {
   let bonusDamage = 0;
 
-  if (hasAccessory(state, "laser") && state.combo > 0 && state.enemy.id !== "rat_swarm") {
+  if (hasAccessory(state, "laser") && state.combo > 0 && !isSwarmEnemy(state.enemy)) {
     bonusDamage += 2;
   }
 
@@ -447,7 +457,7 @@ const logShotContext = (state: CombatState, context: ShotContext, events: Combat
   if (context.ignoreArmor || context.ignoreEvasive) {
     emitLog(events, `${ACCESSORY_DEFS.scope.label} lines up the next shot.`);
   }
-  if (hasAccessory(state, "laser") && state.combo > 0 && state.enemy.id !== "rat_swarm") {
+  if (hasAccessory(state, "laser") && state.combo > 0 && !isSwarmEnemy(state.enemy)) {
     emitLog(events, `${ACCESSORY_DEFS.laser.label} adds +2 damage to the follow-up shot.`);
   }
   if (hasAccessory(state, "practice_target") && state.practiceTargetPrimed) {
@@ -561,7 +571,7 @@ const applyHollowPoint = (state: CombatState, comboBonus: number, context: ShotC
 };
 
 const applyFrangible = (state: CombatState, comboBonus: number, context: ShotContext, events: CombatEvent[]): void => {
-  if (state.enemy.id === "rat_swarm") {
+  if (isSwarmEnemy(state.enemy)) {
     removeSwarmStacks(state.enemy, 4 + comboBonus + context.bonusDamage, events, "Frangible");
     grantGuard(state, 2, events, "Frangible");
     emitLog(events, "Frangible bursts through the front ranks and keeps you covered.");
@@ -618,7 +628,7 @@ const applyExplosive = (state: CombatState, comboBonus: number, context: ShotCon
 
 const applyBirdshot = (state: CombatState, comboBonus: number, context: ShotContext, events: CombatEvent[]): void => {
   const extra = hasAccessory(state, "shotgun_mod") ? 1 : 0;
-  if (state.enemy.id === "rat_swarm") {
+  if (isSwarmEnemy(state.enemy)) {
     removeSwarmStacks(state.enemy, 3 + extra + comboBonus + context.bonusDamage, events, "Birdshot");
     return;
   }
@@ -643,7 +653,7 @@ const applyBuckshot = (state: CombatState, comboBonus: number, context: ShotCont
   const tags = getEffectiveEnemyTags(state.enemy, context);
   const bonusDamage = hasAccessory(state, "shotgun_mod") ? 1 : 0;
 
-  if (state.enemy.id === "rat_swarm") {
+  if (isSwarmEnemy(state.enemy)) {
     removeSwarmStacks(state.enemy, 2 + comboBonus + context.bonusDamage, events, "Buckshot");
     return;
   }
@@ -675,7 +685,7 @@ const applySlug = (state: CombatState, comboBonus: number, context: ShotContext,
   const tags = getEffectiveEnemyTags(state.enemy, context);
   const bonusDamage = hasAccessory(state, "shotgun_mod") ? 1 : 0;
 
-  if (state.enemy.id === "rat_swarm") {
+  if (isSwarmEnemy(state.enemy)) {
     removeSwarmStacks(state.enemy, 1 + comboBonus + context.bonusDamage, events, "Slug");
     return;
   }
@@ -729,9 +739,9 @@ const applyArmorPiercing = (state: CombatState, comboBonus: number, context: Sho
 
 const applyFlechette = (state: CombatState, comboBonus: number, context: ShotContext, events: CombatEvent[]): void => {
   const extraStatus = hasAccessory(state, "rifle_mod") ? 1 : 0;
-  if (state.enemy.id === "rat_swarm") {
+  if (isSwarmEnemy(state.enemy)) {
     removeSwarmStacks(state.enemy, 1 + comboBonus + context.bonusDamage, events, "Flechette");
-    state.enemy.infestation += 3 + extraStatus;
+    state.enemy.infestation = (state.enemy.infestation ?? 0) + 3 + extraStatus;
     events.push({
       type: "status_applied",
       target: "enemy",
@@ -744,13 +754,14 @@ const applyFlechette = (state: CombatState, comboBonus: number, context: ShotCon
   }
 
   if (state.enemy.id === "riot_droid") {
-    state.enemy.shred += 2 + extraStatus + comboBonus;
+    const droid = state.enemy as RiotDroidState;
+    droid.shred = (droid.shred ?? 0) + 2 + extraStatus + comboBonus;
     events.push({
       type: "status_applied",
       target: "enemy",
       status: "shred",
       amount: 2 + extraStatus + comboBonus,
-      total: state.enemy.shred,
+      total: droid.shred,
     });
     damageEnemy(state, 1 + comboBonus + context.bonusDamage, "Flechette", events, true);
     emitLog(events, `Flechette strips ${2 + extraStatus + comboBonus} armor layers from future hits.`);

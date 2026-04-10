@@ -1,5 +1,6 @@
 import { ACCESSORY_DEFS, createShopStock } from "../core/content/accessories";
 import {
+  expandAmmoLoadout,
   getDefaultAmmoLoadout,
   getUnlockedBullets,
   normalizeAmmoLoadout,
@@ -266,8 +267,9 @@ export class CombatSession {
     this.mode = "combat";
     const loadout = normalizeAmmoLoadout(this.selectedLoadout, this.ownedAccessories);
     this.selectedLoadout = loadout;
+    const expandedLoadout = expandAmmoLoadout(this.selectedLoadout);
     const environment = ENVIRONMENT_ORDER[this.currentEnvironmentIndex % ENVIRONMENT_ORDER.length];
-    this.state = createCombatState(this.seedBase, encounterEnemyIds, this.selectedLoadout, this.ownedAccessories, environment);
+    this.state = createCombatState(this.seedBase, encounterEnemyIds, expandedLoadout, this.ownedAccessories, environment);
     this.currentEnvironmentIndex += 1;
     const labels = this.state.enemies.map((enemy) => enemy.label).join(" + ");
     this.logs = [`Loaded encounter: ${labels} in ${environment} environment.`];

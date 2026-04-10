@@ -39,6 +39,12 @@ export const getDefaultAmmoLoadout = (
   ownedAccessories: readonly AccessoryId[],
 ): BulletType[] => getUnlockedBullets(ownedAccessories).slice(0, MAX_LOADOUT_BULLETS);
 
+export const expandAmmoLoadout = (
+  selectedBullets: readonly BulletType[],
+): BulletType[] => {
+  return buildLoadout(selectedBullets);
+};
+
 export const normalizeAmmoLoadout = (
   selectedBullets: readonly BulletType[],
   ownedAccessories: readonly AccessoryId[],
