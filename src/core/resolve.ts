@@ -27,6 +27,7 @@ import type {
   CombatStepResult,
   EnemyId,
   EnemyState,
+  EnvironmentId,
   PlayerAction,
   RatSwarmState,
   RiotDroidState,
@@ -46,25 +47,139 @@ const emitLog = (events: CombatEvent[], text: string): void => {
   events.push({ type: "log", text });
 };
 
+// Environment effect functions
+const applyEnvironmentPlayerTurnStart = (state: CombatState, action: PlayerAction, events: CombatEvent[]): void => {
+  switch (state.environment) {
+    case "tundra":
+      if (action === "fire") {
+        state.turnsWithoutFiring = 0;
+      } else {
+        state.turnsWithoutFiring += 1;
+        if (state.turnsWithoutFiring >= 3) {
+          damagePlayer(state, 2, "Cold", events, true);
+          emitLog(events, "The bitter cold bites at you for inaction.");
+        }
+      }
+      break;
+    case "industrial":
+      if (state.seed % 5 === 0) { // 20% chance
+        const emptyChambers = state.cylinder.chambers
+          .map((chamber, index) => ({ chamber, index }))
+          .filter(({ chamber }) => chamber === null);
+        if (emptyChambers.length > 0) {
+          const randomEmpty = emptyChambers[Math.floor(state.seed / 5) % emptyChambers.length];
+          state.cylinder.chambers[randomEmpty.index] = "blank";
+          emitLog(events, "Industrial machinery loads a blank round into the cylinder.");
+        } else {
+          const rotated = rotateCylinder(state.cylinder);
+          state.cylinder = rotated;
+          events.push({
+            type: "cylinder_changed",
+            action: "rotate",
+            currentIndex: state.cylinder.currentIndex,
+            rotations: 1,
+          });
+          emitLog(events, "Industrial machinery causes the cylinder to shift.");
+        }
+      }
+      break;
+  }
+};
+
+const applyEnvironmentEnemyTurnStart = (state: CombatState, events: CombatEvent[]): void => {
+  switch (state.environment) {
+    case "haunted":
+      // Reality instability - enemies sometimes take damage
+      for (const enemy of state.enemies) {
+        if (!isEnemyDefeated(enemy) && state.seed % 6 === 0) { // ~17% chance
+          damageEnemy(state, 1, "Reality Instability", events);
+          emitLog(events, `${enemy.label} is destabilized by reality instability.`);
+        }
+      }
+      break;
+  }
+};
+
+const applyEnvironmentDoTDamage = (state: CombatState, damage: number, source: string): number => {
+  if (state.environment === "overgrowth" && (source === "Burn" || source === "Infestation")) {
+    return Math.floor(damage * 1.5); // 50% more damage
+  }
+  return damage;
+};
+
+const applyEnvironmentHeatDecay = (state: CombatState): void => {
+  if (state.environment === "desert") {
+    // Heat decays slower in desert - maybe decay every other turn or less
+    if (state.heat > 0 && state.seed % 2 === 0) { // 50% slower decay
+      state.heat = Math.max(0, state.heat - 1);
+    }
+  } else {
+    // Normal heat decay for other environments
+    if (state.heat > 0) {
+      state.heat = Math.max(0, state.heat - 1);
+    }
+  }
+};
+
 const cloneEnemy = (enemy: EnemyState): EnemyState => {
   switch (enemy.id) {
     case "rat_swarm":
-      return { ...enemy };
     case "riot_droid":
-      return { ...enemy };
     case "sniper":
-      return { ...enemy };
     case "drone":
-      return { ...enemy };
     case "mauler_hound":
-      return { ...enemy };
     case "field_medic":
-      return { ...enemy };
     case "hex_slinger":
-      return { ...enemy };
     case "tank":
-      return { ...enemy };
     case "phantom_gunman":
+    // Desert Act
+    case "scorpion_swarm":
+    case "desert_bandit":
+    case "sand_worm":
+    case "mirage_stalker":
+    case "cactus_thug":
+    case "dust_devil":
+    case "sun_baked_marauder":
+    case "oasis_serpent":
+    case "nomad_raider":
+    case "phoenix_hatchling":
+    case "desert_titan":
+    // Tundra Act
+    case "frost_wolf":
+    case "ice_golem":
+    case "snow_yeti":
+    case "arctic_fox":
+    case "blizzard_elemental":
+    case "frozen_marauder":
+    case "polar_bear":
+    case "ice_crystal":
+    case "tundra_troll":
+    case "aurora_spirit":
+    case "frost_giant":
+    // Industrial Act
+    case "scrap_bot":
+    case "welding_drone":
+    case "toxic_sludge":
+    case "assembly_line":
+    case "steam_geyser":
+    case "circuit_breaker":
+    case "hazard_bot":
+    case "conveyor_belt":
+    case "furnace_core":
+    case "maintenance_droid":
+    case "factory_overlord":
+    // Haunted Act
+    case "ghost_pirate":
+    case "zombie_horde":
+    case "shadow_lurker":
+    case "banshee_wail":
+    case "cursed_knight":
+    case "poltergeist":
+    case "wraith_stalker":
+    case "spectral_hound":
+    case "necromancer":
+    case "void_entity":
+    case "lich_lord":
       return { ...enemy };
   }
 };
@@ -90,6 +205,8 @@ const cloneState = (state: CombatState): CombatState => ({
     capacity: state.cylinder.capacity,
   },
   accessories: [...state.accessories],
+  environment: state.environment,
+  turnsWithoutFiring: state.turnsWithoutFiring,
   over: state.over,
   outcome: state.outcome,
 });
@@ -275,6 +392,7 @@ const damagePlayer = (
 
 const resetHeat = (state: CombatState): void => {
   state.heat = 0;
+  state.turnsWithoutFiring = 0; // Reset for tundra environment
 };
 
 const resetCombo = (state: CombatState): void => {
@@ -282,7 +400,8 @@ const resetCombo = (state: CombatState): void => {
 };
 
 const applyShotHeat = (state: CombatState, events: CombatEvent[]): boolean => {
-  state.heat += 1;
+  const heatIncrease = state.environment === "desert" ? 2 : 1;
+  state.heat += heatIncrease;
 
   if (state.heat >= OVERHEAT_THRESHOLD) {
     emitLog(events, "The revolver is too hot to hold. You lose the next turn while it cools.");
@@ -815,6 +934,7 @@ export const createCombatState = (
   enemyIds: EnemyId | EnemyId[],
   loadout: readonly BulletType[] = STARTER_LOADOUT,
   accessories: readonly AccessoryId[] = [],
+  environment: EnvironmentId = "desert",
 ): CombatState => {
   const normalizedSeed = normalizeSeed(seed);
   const deckResult = createDeckState(loadout, normalizedSeed);
@@ -839,6 +959,8 @@ export const createCombatState = (
     deck: deckResult.deck,
     cylinder: createEmptyCylinder(cylinderCapacity),
     accessories: [...accessories],
+    environment,
+    turnsWithoutFiring: 0,
     over: false,
     outcome: null,
   };
@@ -852,6 +974,9 @@ const resolveEnemyTurn = (
   state: CombatState,
   events: CombatEvent[],
 ): "victory" | "defeat" | null => {
+  // Apply environment effects at start of enemy turn
+  applyEnvironmentEnemyTurnStart(state, events);
+  
   for (let enemyIndex = 0; enemyIndex < state.enemies.length; enemyIndex += 1) {
     const enemy = getEnemyByIndex(state, enemyIndex);
     if (isEnemyDefeated(enemy)) {
@@ -861,16 +986,18 @@ const resolveEnemyTurn = (
     enemyDef.onTurnStart?.(state, enemy as never, (event) => events.push(event));
 
     if (enemy.burn && enemy.burn > 0) {
-      damageEnemy(state, 1, "Burn", events);
+      const burnDamage = applyEnvironmentDoTDamage(state, 1, "Burn");
+      damageEnemy(state, burnDamage, "Burn", events);
       enemy.burn -= 1;
-      events.push({ type: "status_applied", target: "enemy", status: "burn", amount: 1, total: enemy.burn });
+      events.push({ type: "status_applied", target: "enemy", status: "burn", amount: burnDamage, total: enemy.burn });
       emitLog(events, "Burn continues to rack the enemy.");
     }
 
     if (enemy.id !== "rat_swarm" && enemy.infestation && enemy.infestation > 0) {
-      damageEnemy(state, 1, "Infestation", events);
+      const infestationDamage = applyEnvironmentDoTDamage(state, 1, "Infestation");
+      damageEnemy(state, infestationDamage, "Infestation", events);
       enemy.infestation -= 1;
-      events.push({ type: "status_applied", target: "enemy", status: "infestation", amount: 1, total: enemy.infestation });
+      events.push({ type: "status_applied", target: "enemy", status: "infestation", amount: infestationDamage, total: enemy.infestation });
       emitLog(events, "Infestation spreads in the enemy flesh.");
     }
 
@@ -914,6 +1041,10 @@ export const stepCombat = (
   const events: CombatEvent[] = [];
   events.push({ type: "player_action", action });
   maybeApplyTacticalVest(nextState, events);
+  
+  // Apply environment effects at start of player turn
+  applyEnvironmentPlayerTurnStart(nextState, action, events);
+  
   let lostTurnToHeat = false;
 
   switch (action) {
@@ -999,6 +1130,10 @@ export const stepCombat = (
   }
 
   applyBeerHeatReduction(nextState, previousTurn, turnAdvance, events);
+  
+  // Apply environment heat decay
+  applyEnvironmentHeatDecay(nextState);
+  
   nextState.turn += turnAdvance;
   getEnemyByIndex(nextState, selectedEnemyIndex);
   events.push({ type: "enemy_intent", intent: getEnemyIntent(nextState.enemy).label });
@@ -1029,6 +1164,7 @@ export const getCombatSnapshot = (state: CombatState) => ({
   combo: state.combo,
   heat: state.heat,
   outcome: state.outcome,
+  environment: state.environment,
   player: {
     hp: state.player.hp,
     guard: state.player.guard,

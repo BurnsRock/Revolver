@@ -108,12 +108,16 @@ export class ShopScene extends Phaser.Scene {
         fontFamily: "Arial",
         fontSize: "22px",
         color: "#fff6db",
+        align: "center",
+        wordWrap: { width: 220 },
       }).setOrigin(0.5, 0);
 
       const body = this.add.text(x, 312, "a", {
         fontFamily: "Arial",
         fontSize: "16px",
         color: "#d7dee8",
+        align: "center",
+        wordWrap: { width: 220 },
       }).setOrigin(0.5, 0);
 
       this.accessoryCards.push({ box, title, body });
@@ -123,6 +127,7 @@ export class ShopScene extends Phaser.Scene {
       fontFamily: "Arial",
       fontSize: "20px",
       color: "#d7dee8",
+      wordWrap: { width: 900 },
     }).setOrigin(0.5, 0);
 
     this.ammoButton = this.add.rectangle(WIDTH / 2 - 150, 664, 280, 52, 0x31465d, 0.98);
@@ -164,6 +169,7 @@ export class ShopScene extends Phaser.Scene {
       fontFamily: "Arial",
       fontSize: "20px",
       color: "#d7dee8",
+      wordWrap: { width: 850 },
     }).setOrigin(0.5, 0).setDepth(21).setVisible(false);
 
     this.ammoDoneButton = this.add.rectangle(WIDTH / 2, 642, 250, 52, 0x8f6422, 0.98);
@@ -220,6 +226,7 @@ export class ShopScene extends Phaser.Scene {
         fontFamily: "Arial",
         fontSize: "16px",
         color: "#d7dee8",
+        wordWrap: { width: 180 },
       }).setOrigin(0.5).setDepth(22).setVisible(false);
 
       this.bulletToggles.set(bullet, { box, text });
@@ -381,7 +388,7 @@ export class ShopScene extends Phaser.Scene {
           `${index + 1}. ${accessory.label} [${RARITY_LABELS[accessory.rarity]}] - $${accessory.price}`,
         );
         card.title.setColor(affordable ? rarityStyle.title : "#f2c7c7");
-        this.safeSetText(card.body, `${accessory.effect}\n${accessory.description}`);
+        this.safeSetText(card.body, accessory.description);
         card.body.setColor(affordable ? rarityStyle.body : "#d2b6b6");
       });
     } catch (err) {

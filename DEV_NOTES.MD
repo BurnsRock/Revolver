@@ -70,6 +70,41 @@
 
 ---
 
+## Environment Ideas
+- Desert / Hot climate
+  - Heat builds up faster
+  - Heat decays slower
+  - Encourages restraint, rotate, and reload timing
+  - Makes overclock / pyro builds riskier but potentially stronger
+
+- Tundra / Cold climate
+  - If the player does not fire for too long, they take chip damage or gain cold stacks
+  - Encourages aggression and using heat as a survival mechanic
+  - Makes passive play and stalling weaker
+
+- Industrial / Factory
+  - Machinery interference can randomly shift the cylinder or add junk rounds
+  - Disrupts planning-heavy builds and creates more chaos
+  - Good fit for robotic enemies
+
+- Haunted Grounds
+  - Reality instability causes strange combat behavior
+  - Enemies may gain intermittent evasive windows or statuses may behave unpredictably
+  - Good fit for supernatural enemies
+
+- Overgrowth / Jungle
+  - Damage-over-time effects like burn or infection are stronger
+  - Buffs bioweapon and pyro builds
+  - Can make slower, scaling builds more viable
+
+### Environment Design Notes
+- Environments should bend the core loop, not replace it
+- Best use is act-wide modifiers, not random fight-by-fight noise
+- They should buff some playstyles and nerf others
+- Start by testing only 2 environments for MVP-style implementation:
+  - Desert
+  - Tundra
+
 ## ❌ Parking Lot (Later / NOT now)
 - relic system
 - meta progression

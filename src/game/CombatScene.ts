@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { ACCESSORY_DEFS } from "../core/content/accessories";
 import { BULLET_DEFS } from "../core/content/bullets";
+import { ENVIRONMENT_DEFS } from "../core/content/environments";
 import {
   CYLINDER_ROTATION_DIRECTION,
   findNextLoadedChamberIndex,
@@ -25,6 +26,54 @@ const UI_TEXTURE_KEYS = {
   hex_slinger: "ui-hex-slinger",
   tank: "ui-tank",
   phantom_gunman: "ui-phantom-gunman",
+  // Desert Act
+  scorpion_swarm: "ui-scorpion-swarm",
+  desert_bandit: "ui-desert-bandit",
+  sand_worm: "ui-sand-worm",
+  mirage_stalker: "ui-mirage-stalker",
+  cactus_thug: "ui-cactus-thug",
+  dust_devil: "ui-dust-devil",
+  sun_baked_marauder: "ui-sun-baked-marauder",
+  oasis_serpent: "ui-oasis-serpent",
+  nomad_raider: "ui-nomad-raider",
+  phoenix_hatchling: "ui-phoenix-hatchling",
+  desert_titan: "ui-desert-titan",
+  // Tundra Act
+  frost_wolf: "ui-frost-wolf",
+  ice_golem: "ui-ice-golem",
+  snow_yeti: "ui-snow-yeti",
+  arctic_fox: "ui-arctic-fox",
+  blizzard_elemental: "ui-blizzard-elemental",
+  frozen_marauder: "ui-frozen-marauder",
+  polar_bear: "ui-polar-bear",
+  ice_crystal: "ui-ice-crystal",
+  tundra_troll: "ui-tundra-troll",
+  aurora_spirit: "ui-aurora-spirit",
+  frost_giant: "ui-frost-giant",
+  // Industrial Act
+  scrap_bot: "ui-scrap-bot",
+  welding_drone: "ui-welding-drone",
+  toxic_sludge: "ui-toxic-sludge",
+  assembly_line: "ui-assembly-line",
+  steam_geyser: "ui-steam-geyser",
+  circuit_breaker: "ui-circuit-breaker",
+  hazard_bot: "ui-hazard-bot",
+  conveyor_belt: "ui-conveyor-belt",
+  furnace_core: "ui-furnace-core",
+  maintenance_droid: "ui-maintenance-droid",
+  factory_overlord: "ui-factory-overlord",
+  // Haunted Act
+  ghost_pirate: "ui-ghost-pirate",
+  zombie_horde: "ui-zombie-horde",
+  shadow_lurker: "ui-shadow-lurker",
+  banshee_wail: "ui-banshee-wail",
+  cursed_knight: "ui-cursed-knight",
+  poltergeist: "ui-poltergeist",
+  wraith_stalker: "ui-wraith-stalker",
+  spectral_hound: "ui-spectral-hound",
+  necromancer: "ui-necromancer",
+  void_entity: "ui-void-entity",
+  lich_lord: "ui-lich-lord",
   basic: "ui-basic",
   hollow_point: "ui-hollow-point",
   frangible: "ui-frangible",
@@ -138,6 +187,54 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   hex_slinger: 20,
   tank: 25,
   phantom_gunman: 22,
+  // Desert Act
+  scorpion_swarm: 12,
+  desert_bandit: 16,
+  sand_worm: 18,
+  mirage_stalker: 14,
+  cactus_thug: 17,
+  dust_devil: 13,
+  sun_baked_marauder: 19,
+  oasis_serpent: 15,
+  nomad_raider: 18,
+  phoenix_hatchling: 16,
+  desert_titan: 30,
+  // Tundra Act
+  frost_wolf: 17,
+  ice_golem: 20,
+  snow_yeti: 22,
+  arctic_fox: 14,
+  blizzard_elemental: 15,
+  frozen_marauder: 18,
+  polar_bear: 23,
+  ice_crystal: 13,
+  tundra_troll: 24,
+  aurora_spirit: 16,
+  frost_giant: 32,
+  // Industrial Act
+  scrap_bot: 15,
+  welding_drone: 16,
+  toxic_sludge: 17,
+  assembly_line: 19,
+  steam_geyser: 14,
+  circuit_breaker: 13,
+  hazard_bot: 21,
+  conveyor_belt: 20,
+  furnace_core: 22,
+  maintenance_droid: 18,
+  factory_overlord: 35,
+  // Haunted Act
+  ghost_pirate: 17,
+  zombie_horde: 12,
+  shadow_lurker: 16,
+  banshee_wail: 15,
+  cursed_knight: 23,
+  poltergeist: 14,
+  wraith_stalker: 20,
+  spectral_hound: 18,
+  necromancer: 21,
+  void_entity: 19,
+  lich_lord: 28,
 };
 const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   rat_swarm: UI_TEXTURE_KEYS.rat_swarm,
@@ -149,6 +246,54 @@ const ENEMY_TEXTURE_KEYS: Record<EnemyId, string> = {
   hex_slinger: UI_TEXTURE_KEYS.hex_slinger,
   tank: UI_TEXTURE_KEYS.tank,
   phantom_gunman: UI_TEXTURE_KEYS.phantom_gunman,
+  // Desert Act
+  scorpion_swarm: UI_TEXTURE_KEYS.scorpion_swarm,
+  desert_bandit: UI_TEXTURE_KEYS.desert_bandit,
+  sand_worm: UI_TEXTURE_KEYS.sand_worm,
+  mirage_stalker: UI_TEXTURE_KEYS.mirage_stalker,
+  cactus_thug: UI_TEXTURE_KEYS.cactus_thug,
+  dust_devil: UI_TEXTURE_KEYS.dust_devil,
+  sun_baked_marauder: UI_TEXTURE_KEYS.sun_baked_marauder,
+  oasis_serpent: UI_TEXTURE_KEYS.oasis_serpent,
+  nomad_raider: UI_TEXTURE_KEYS.nomad_raider,
+  phoenix_hatchling: UI_TEXTURE_KEYS.phoenix_hatchling,
+  desert_titan: UI_TEXTURE_KEYS.desert_titan,
+  // Tundra Act
+  frost_wolf: UI_TEXTURE_KEYS.frost_wolf,
+  ice_golem: UI_TEXTURE_KEYS.ice_golem,
+  snow_yeti: UI_TEXTURE_KEYS.snow_yeti,
+  arctic_fox: UI_TEXTURE_KEYS.arctic_fox,
+  blizzard_elemental: UI_TEXTURE_KEYS.blizzard_elemental,
+  frozen_marauder: UI_TEXTURE_KEYS.frozen_marauder,
+  polar_bear: UI_TEXTURE_KEYS.polar_bear,
+  ice_crystal: UI_TEXTURE_KEYS.ice_crystal,
+  tundra_troll: UI_TEXTURE_KEYS.tundra_troll,
+  aurora_spirit: UI_TEXTURE_KEYS.aurora_spirit,
+  frost_giant: UI_TEXTURE_KEYS.frost_giant,
+  // Industrial Act
+  scrap_bot: UI_TEXTURE_KEYS.scrap_bot,
+  welding_drone: UI_TEXTURE_KEYS.welding_drone,
+  toxic_sludge: UI_TEXTURE_KEYS.toxic_sludge,
+  assembly_line: UI_TEXTURE_KEYS.assembly_line,
+  steam_geyser: UI_TEXTURE_KEYS.steam_geyser,
+  circuit_breaker: UI_TEXTURE_KEYS.circuit_breaker,
+  hazard_bot: UI_TEXTURE_KEYS.hazard_bot,
+  conveyor_belt: UI_TEXTURE_KEYS.conveyor_belt,
+  furnace_core: UI_TEXTURE_KEYS.furnace_core,
+  maintenance_droid: UI_TEXTURE_KEYS.maintenance_droid,
+  factory_overlord: UI_TEXTURE_KEYS.factory_overlord,
+  // Haunted Act
+  ghost_pirate: UI_TEXTURE_KEYS.ghost_pirate,
+  zombie_horde: UI_TEXTURE_KEYS.zombie_horde,
+  shadow_lurker: UI_TEXTURE_KEYS.shadow_lurker,
+  banshee_wail: UI_TEXTURE_KEYS.banshee_wail,
+  cursed_knight: UI_TEXTURE_KEYS.cursed_knight,
+  poltergeist: UI_TEXTURE_KEYS.poltergeist,
+  wraith_stalker: UI_TEXTURE_KEYS.wraith_stalker,
+  spectral_hound: UI_TEXTURE_KEYS.spectral_hound,
+  necromancer: UI_TEXTURE_KEYS.necromancer,
+  void_entity: UI_TEXTURE_KEYS.void_entity,
+  lich_lord: UI_TEXTURE_KEYS.lich_lord,
 };
 const cylinderImageUrl = new URL("../assets/images/cylinder-64.png", import.meta.url).href;
 const playerImageUrl = new URL("../assets/images/player-gunslinger-64.png", import.meta.url).href;
@@ -161,6 +306,54 @@ const fieldMedicImageUrl = sniperImageUrl;
 const tankImageUrl = new URL("../assets/images/tank-64.png", import.meta.url).href;
 const phantomGunmanImageUrl = new URL("../assets/images/phantom-gunman-64.png", import.meta.url).href;
 const hexSlingerImageUrl = phantomGunmanImageUrl;
+// Desert Act
+const scorpionSwarmImageUrl = ratSwarmImageUrl;
+const desertBanditImageUrl = phantomGunmanImageUrl;
+const sandWormImageUrl = new URL("../assets/images/sand-worm-64.png", import.meta.url).href;
+const mirageStalkerImageUrl = phantomGunmanImageUrl;
+const cactusThugImageUrl = tankImageUrl;
+const dustDevilImageUrl = new URL("../assets/images/dust-devil-64.png", import.meta.url).href;
+const sunBakedMarauderImageUrl = phantomGunmanImageUrl;
+const oasisSerpentImageUrl = new URL("../assets/images/oasis-serpent-64.png", import.meta.url).href;
+const nomadRaiderImageUrl = phantomGunmanImageUrl;
+const phoenixHatchlingImageUrl = new URL("../assets/images/phoenix-hatchling-64.png", import.meta.url).href;
+const desertTitanImageUrl = tankImageUrl;
+// Tundra Act
+const frostWolfImageUrl = new URL("../assets/images/frost-wolf-64.png", import.meta.url).href;
+const iceGolemImageUrl = tankImageUrl;
+const snowYetiImageUrl = new URL("../assets/images/snow-yeti-64.png", import.meta.url).href;
+const arcticFoxImageUrl = new URL("../assets/images/arctic-fox-64.png", import.meta.url).href;
+const blizzardElementalImageUrl = new URL("../assets/images/blizzard-elemental-64.png", import.meta.url).href;
+const frozenMarauderImageUrl = phantomGunmanImageUrl;
+const polarBearImageUrl = new URL("../assets/images/polar-bear-64.png", import.meta.url).href;
+const iceCrystalImageUrl = new URL("../assets/images/ice-crystal-64.png", import.meta.url).href;
+const tundraTrollImageUrl = tankImageUrl;
+const auroraSpiritImageUrl = new URL("../assets/images/aurora-spirit-64.png", import.meta.url).href;
+const frostGiantImageUrl = tankImageUrl;
+// Industrial Act
+const scrapBotImageUrl = droneImageUrl;
+const weldingDroneImageUrl = droneImageUrl;
+const toxicSludgeImageUrl = new URL("../assets/images/toxic-sludge-64.png", import.meta.url).href;
+const assemblyLineImageUrl = new URL("../assets/images/assembly-line-64.png", import.meta.url).href;
+const steamGeyserImageUrl = new URL("../assets/images/steam-geyser-64.png", import.meta.url).href;
+const circuitBreakerImageUrl = new URL("../assets/images/circuit-breaker-64.png", import.meta.url).href;
+const hazardBotImageUrl = droneImageUrl;
+const conveyorBeltImageUrl = new URL("../assets/images/conveyor-belt-64.png", import.meta.url).href;
+const furnaceCoreImageUrl = new URL("../assets/images/furnace-core-64.png", import.meta.url).href;
+const maintenanceDroidImageUrl = droneImageUrl;
+const factoryOverlordImageUrl = tankImageUrl;
+// Haunted Act
+const ghostPirateImageUrl = phantomGunmanImageUrl;
+const zombieHordeImageUrl = ratSwarmImageUrl;
+const shadowLurkerImageUrl = phantomGunmanImageUrl;
+const bansheeWailImageUrl = new URL("../assets/images/banshee-wail-64.png", import.meta.url).href;
+const cursedKnightImageUrl = tankImageUrl;
+const poltergeistImageUrl = phantomGunmanImageUrl;
+const wraithStalkerImageUrl = phantomGunmanImageUrl;
+const spectralHoundImageUrl = new URL("../assets/images/spectral-hound-64.png", import.meta.url).href;
+const necromancerImageUrl = phantomGunmanImageUrl;
+const voidEntityImageUrl = new URL("../assets/images/void-entity-64.png", import.meta.url).href;
+const lichLordImageUrl = tankImageUrl;
 
 const basicImageUrl = new URL("../assets/images/basic-64.png", import.meta.url).href;
 const birdshotImageUrl = new URL("../assets/images/birdshot-64.png", import.meta.url).href;
@@ -310,6 +503,54 @@ export class CombatScene extends Phaser.Scene {
     this.load.image(UI_TEXTURE_KEYS.hex_slinger, hexSlingerImageUrl);
     this.load.image(UI_TEXTURE_KEYS.tank, tankImageUrl);
     this.load.image(UI_TEXTURE_KEYS.phantom_gunman, phantomGunmanImageUrl);
+    // Desert Act
+    this.load.image(UI_TEXTURE_KEYS.scorpion_swarm, scorpionSwarmImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.desert_bandit, desertBanditImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.sand_worm, sandWormImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.mirage_stalker, mirageStalkerImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.cactus_thug, cactusThugImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.dust_devil, dustDevilImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.sun_baked_marauder, sunBakedMarauderImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.oasis_serpent, oasisSerpentImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.nomad_raider, nomadRaiderImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.phoenix_hatchling, phoenixHatchlingImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.desert_titan, desertTitanImageUrl);
+    // Tundra Act
+    this.load.image(UI_TEXTURE_KEYS.frost_wolf, frostWolfImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.ice_golem, iceGolemImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.snow_yeti, snowYetiImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.arctic_fox, arcticFoxImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.blizzard_elemental, blizzardElementalImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.frozen_marauder, frozenMarauderImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.polar_bear, polarBearImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.ice_crystal, iceCrystalImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.tundra_troll, tundraTrollImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.aurora_spirit, auroraSpiritImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.frost_giant, frostGiantImageUrl);
+    // Industrial Act
+    this.load.image(UI_TEXTURE_KEYS.scrap_bot, scrapBotImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.welding_drone, weldingDroneImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.toxic_sludge, toxicSludgeImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.assembly_line, assemblyLineImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.steam_geyser, steamGeyserImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.circuit_breaker, circuitBreakerImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.hazard_bot, hazardBotImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.conveyor_belt, conveyorBeltImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.furnace_core, furnaceCoreImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.maintenance_droid, maintenanceDroidImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.factory_overlord, factoryOverlordImageUrl);
+    // Haunted Act
+    this.load.image(UI_TEXTURE_KEYS.ghost_pirate, ghostPirateImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.zombie_horde, zombieHordeImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.shadow_lurker, shadowLurkerImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.banshee_wail, bansheeWailImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.cursed_knight, cursedKnightImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.poltergeist, poltergeistImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.wraith_stalker, wraithStalkerImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.spectral_hound, spectralHoundImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.necromancer, necromancerImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.void_entity, voidEntityImageUrl);
+    this.load.image(UI_TEXTURE_KEYS.lich_lord, lichLordImageUrl);
 
     this.load.image(UI_TEXTURE_KEYS.basic, basicImageUrl);
     this.load.image(UI_TEXTURE_KEYS.hollow_point, hollowPointImageUrl);
@@ -1032,7 +1273,6 @@ export class CombatScene extends Phaser.Scene {
           BULLET_DEFS[round].label,
           `Damage: ${BULLET_TOOLTIP_LINES[round].damage}`,
           `Effect: ${BULLET_TOOLTIP_LINES[round].effect}`,
-          `Effective vs: ${BULLET_TOOLTIP_LINES[round].effectiveVs}`,
         ].join("\n")
       : [
           "Empty Chamber",
@@ -1056,9 +1296,7 @@ export class CombatScene extends Phaser.Scene {
 
   private showAccessoryTooltip(accessoryId: AccessoryId, x: number, y: number): void {
     const accessory = ACCESSORY_DEFS[accessoryId];
-    this.tooltipText.setText(
-      [accessory.label, `Effect: ${accessory.effect}`, accessory.description].join("\n"),
-    );
+    this.tooltipText.setText([accessory.label, accessory.description].join("\n"));
 
     const textWidth = Math.min(280, Math.ceil(this.tooltipText.width + 26));
     const textHeight = Math.ceil(this.tooltipText.height + 22);
@@ -1380,7 +1618,7 @@ export class CombatScene extends Phaser.Scene {
     this.uiSprites.enemy.setTexture(ENEMY_TEXTURE_KEYS[selectedEnemy.id]);
 
     this.playerText.setText(
-      `PLAYER\nHP ${state.player.hp}/${state.player.maxHp}\nGuard ${state.player.guard}\nCombo +${state.combo}\nHeat ${state.heat}/6`,
+      `PLAYER\nHP ${state.player.hp}/${state.player.maxHp}\nGuard ${state.player.guard}\nCombo +${state.combo}\nHeat ${state.heat}/6\n${ENVIRONMENT_DEFS[state.environment].label}`,
     );
 
     this.enemyText.setText(this.getEnemySummary());

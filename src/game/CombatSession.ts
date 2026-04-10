@@ -6,7 +6,7 @@ import {
 } from "../core/content/bullets";
 import { createEnemyState, generateEncounterOrder } from "../core/content/enemies";
 import { createCombatState, getCombatSnapshot, stepCombat } from "../core/resolve";
-import type { AccessoryId, BulletType, CombatEvent, CombatState, EnemyId, PlayerAction } from "../core/types";
+import type { AccessoryId, BulletType, CombatEvent, CombatState, EnemyId, EnvironmentId, PlayerAction } from "../core/types";
 
 const INITIAL_SEED_BASE = 1337;
 const INITIAL_SHOP_SEED = 4001;
@@ -21,7 +21,57 @@ const ENEMY_REWARDS: Record<EnemyId, number> = {
   hex_slinger: 20,
   tank: 25,
   phantom_gunman: 22,
+  // Desert Act
+  scorpion_swarm: 12,
+  desert_bandit: 16,
+  sand_worm: 18,
+  mirage_stalker: 14,
+  cactus_thug: 17,
+  dust_devil: 13,
+  sun_baked_marauder: 19,
+  oasis_serpent: 15,
+  nomad_raider: 18,
+  phoenix_hatchling: 16,
+  desert_titan: 30,
+  // Tundra Act
+  frost_wolf: 17,
+  ice_golem: 20,
+  snow_yeti: 22,
+  arctic_fox: 14,
+  blizzard_elemental: 15,
+  frozen_marauder: 18,
+  polar_bear: 23,
+  ice_crystal: 13,
+  tundra_troll: 24,
+  aurora_spirit: 16,
+  frost_giant: 32,
+  // Industrial Act
+  scrap_bot: 15,
+  welding_drone: 16,
+  toxic_sludge: 17,
+  assembly_line: 19,
+  steam_geyser: 14,
+  circuit_breaker: 13,
+  hazard_bot: 21,
+  conveyor_belt: 20,
+  furnace_core: 22,
+  maintenance_droid: 18,
+  factory_overlord: 35,
+  // Haunted Act
+  ghost_pirate: 17,
+  zombie_horde: 12,
+  shadow_lurker: 16,
+  banshee_wail: 15,
+  cursed_knight: 23,
+  poltergeist: 14,
+  wraith_stalker: 20,
+  spectral_hound: 18,
+  necromancer: 21,
+  void_entity: 19,
+  lich_lord: 28,
 };
+
+const ENVIRONMENT_ORDER: EnvironmentId[] = ["desert", "tundra", "industrial", "haunted"];
 
 export type ScreenMode = "main_menu" | "combat" | "shop" | "death" | "victory";
 export type ShopPurchaseResult =
@@ -41,6 +91,7 @@ export class CombatSession {
   private shopStock: Array<AccessoryId | null> = [];
   private state!: CombatState;
   private logs: string[] = [];
+  private currentEnvironmentIndex = 0;
 
   public getMode(): ScreenMode {
     return this.mode;
@@ -157,6 +208,7 @@ export class CombatSession {
     this.seedBase = INITIAL_SEED_BASE;
     this.shopSeed = INITIAL_SHOP_SEED;
     this.encounterOrder = generateEncounterOrder();
+    this.currentEnvironmentIndex = 0;
     this.startEncounter(this.encounterOrder[0] ?? []);
   }
 
@@ -214,9 +266,11 @@ export class CombatSession {
     this.mode = "combat";
     const loadout = normalizeAmmoLoadout(this.selectedLoadout, this.ownedAccessories);
     this.selectedLoadout = loadout;
-    this.state = createCombatState(this.seedBase, encounterEnemyIds, this.selectedLoadout, this.ownedAccessories);
+    const environment = ENVIRONMENT_ORDER[this.currentEnvironmentIndex % ENVIRONMENT_ORDER.length];
+    this.state = createCombatState(this.seedBase, encounterEnemyIds, this.selectedLoadout, this.ownedAccessories, environment);
+    this.currentEnvironmentIndex += 1;
     const labels = this.state.enemies.map((enemy) => enemy.label).join(" + ");
-    this.logs = [`Loaded encounter: ${labels}.`];
+    this.logs = [`Loaded encounter: ${labels} in ${environment} environment.`];
   }
 
   public performAction(action: PlayerAction): CombatEvent[] {
